@@ -36,17 +36,20 @@ class Platformer extends Phaser.Scene {
 
 
         // Make it collidable
-        this.bgLayer.setCollisionByProperty({
-            collides: true
-        });
+        // Remove collision from bgLayer to avoid invisible walls
+        // this.bgLayer.setCollisionByProperty({
+        //     collides: true
+        // });
 
         this.platformLayer.setCollisionByProperty({
             collides: true
         });
 
-        this.prettyLayer.setCollisionByProperty({
+/*         this.prettyLayer.setCollisionByProperty({
             collides: true
-        });
+        }); */
+        // Explicitly clear collision on prettyLayer to avoid invisible walls
+        this.prettyLayer.setCollision(false);
 
         // Create coins from Objects layer in tilemap
         this.coins = this.map.createFromObjects("Donuts-Candy", {
@@ -231,8 +234,10 @@ class Platformer extends Phaser.Scene {
 
         // debug key listener (assigned to D key)
         this.input.keyboard.on('keydown-D', () => {
-            this.physics.world.drawDebug = this.physics.world.drawDebug ? false : true
-            this.physics.world.debugGraphic.clear()
+            this.physics.world.drawDebug = this.physics.world.drawDebug ? false : true;
+            if (this.physics.world.debugGraphic) {
+                this.physics.world.debugGraphic.clear();
+            }
         }, this);
 
         // Movement vfx here
