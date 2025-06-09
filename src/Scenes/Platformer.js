@@ -69,6 +69,15 @@ class Platformer extends Phaser.Scene {
         this.coinGroup = this.add.group(this.coins);
         this.donutGroup = this.add.group(this.donuts);
 
+        // --- Spikes setup ---
+        this.spikes = this.map.createFromObjects("Donuts-Candy", {
+            name: "spike"
+        });
+        this.physics.world.enable(this.spikes, Phaser.Physics.Arcade.STATIC_BODY);
+        // Make all spike objects invisible (see-thru collision box)
+        this.spikes.forEach(obj => obj.visible = false);
+        this.spikeGroup = this.add.group(this.spikes);
+
         // Find water tiles
         /* this.waterTiles = this.groundLayer.filterTiles(tile => {
             return tile.properties.water == true;
@@ -204,6 +213,14 @@ class Platformer extends Phaser.Scene {
                     }
                 }
             }
+        });
+
+
+        // --- Spike collision: reset player to spawn point ---
+        this.physics.add.overlap(my.sprite.player, this.spikeGroup, () => {
+            // Reset player to spawn point (change as needed)
+            my.sprite.player.setPosition(29, 350);
+            my.sprite.player.body.setVelocity(0, 0);
         });
 
 
