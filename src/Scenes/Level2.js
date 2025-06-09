@@ -1,6 +1,6 @@
-class Platformer extends Phaser.Scene {
+class Level2 extends Phaser.Scene {
     constructor() {
-        super("platformerScene");
+        super("Level2");
         
     }
 
@@ -18,7 +18,7 @@ class Platformer extends Phaser.Scene {
         // Create a new tilemap game object which uses 18x18 pixel tiles, and is
         // 45 tiles wide and 25 tiles tall.
         // this.map = this.add.tilemap("platformer-level-1", 18, 18, 45, 25);
-        this.map = this.add.tilemap("platformer-final-lvl1", 18, 18, 90, 25);
+        this.map = this.add.tilemap("platformer-final-lvl1");
 
         // Add a tileset to the map
         // First parameter: name we gave the tileset in Tiled
@@ -34,6 +34,13 @@ class Platformer extends Phaser.Scene {
         this.platformLayer = this.map.createLayer("Platforms", this.tileset, 0, 0);
         this.prettyLayer = this.map.createLayer("Pretty-Stuffs", this.tileset, 0, 0);
 
+        // Set world bounds to match the map size
+        this.physics.world.setBounds(
+            0,
+            0,
+            this.map.widthInPixels,
+            this.map.heightInPixels
+        );
 
         // Make it collidable
         // Remove collision from bgLayer to avoid invisible walls
@@ -125,7 +132,7 @@ class Platformer extends Phaser.Scene {
 
         // set up player avatar
         my.sprite.player = this.physics.add.sprite(29, 350, "platformer_characters", "tile_0004.png");
-        my.sprite.player.setCollideWorldBounds(true);
+        my.sprite.player.setCollideWorldBounds(true); // Enable world bounds collision
         my.sprite.player.setDepth(10);
 
         // Enable collision handling
@@ -316,6 +323,12 @@ class Platformer extends Phaser.Scene {
 
         if(Phaser.Input.Keyboard.JustDown(this.rKey)) {
             this.scene.restart();
+        }
+
+        // Transition to Level2 when player reaches the right edge of the map
+        if (my.sprite.player.x >= this.map.widthInPixels-1) {
+            this.scene.start("Level2");
+            return;
         }
     }
 }
