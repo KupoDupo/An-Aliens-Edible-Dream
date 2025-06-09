@@ -112,7 +112,7 @@ class Platformer extends Phaser.Scene {
 
 
         // set up player avatar
-        my.sprite.player = this.physics.add.sprite(50, 10, "platformer_characters", "tile_0004.png");
+        my.sprite.player = this.physics.add.sprite(29, 350, "platformer_characters", "tile_0004.png");
         my.sprite.player.setCollideWorldBounds(true);
         my.sprite.player.setDepth(10);
 
@@ -164,6 +164,48 @@ class Platformer extends Phaser.Scene {
             // at the position (x,y) of obj2 (the collected coin)
             my.vfx.donutCollect.emitParticle(1, obj2.x, obj2.y);
         });
+
+        // --- One-way platforms setup ---
+        this.onewayPlatforms = [];
+        this.platformLayer.forEachTile(tile => {
+            if (tile.properties.oneway) {
+                let body = this.physics.add.staticImage(
+                    tile.getCenterX(),
+                    tile.getCenterY(),
+                    null
+                );
+                body.displayWidth = tile.width;
+                body.displayHeight = tile.height;
+                body.visible = false;
+                body.refreshBody();
+                this.onewayPlatforms.push(body);
+            }
+        });
+
+        // Add update callback for one-way platforms
+        this.events.on('update', () => {
+            for (let platform of this.onewayPlatforms) {
+                let player = my.sprite.player;
+                // Check if player is falling and feet are above the platform
+                if (
+                    player.body.velocity.y > 0 &&
+                    player.body.bottom <= platform.body.top + 5 &&
+                    player.body.right > platform.body.left &&
+                    player.body.left < platform.body.right
+                ) {
+                    // If player is overlapping the platform horizontally and falling onto it
+                    if (
+                        player.body.bottom + player.body.velocity.y * this.game.loop.delta / 1000 >= platform.body.top
+                    ) {
+                        player.body.y = platform.body.top - player.body.height;
+                        player.body.velocity.y = 0;
+                        player.body.blocked.down = true;
+                        player.body.touching.down = true;
+                    }
+                }
+            }
+        });
+
 
         // set up Phaser-provided cursor key input
         cursors = this.input.keyboard.createCursorKeys();
