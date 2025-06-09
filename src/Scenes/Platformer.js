@@ -18,7 +18,7 @@ class Platformer extends Phaser.Scene {
         // Create a new tilemap game object which uses 18x18 pixel tiles, and is
         // 45 tiles wide and 25 tiles tall.
         // this.map = this.add.tilemap("platformer-level-1", 18, 18, 45, 25);
-        this.map = this.add.tilemap("platformer-level-1", 18, 18, 90, 25);
+        this.map = this.add.tilemap("platformer-final-lvl1", 18, 18, 90, 25);
 
         // Add a tileset to the map
         // First parameter: name we gave the tileset in Tiled
@@ -26,7 +26,7 @@ class Platformer extends Phaser.Scene {
         this.tileset = [
             this.map.addTilesetImage("tilemap_packed_dessert", "dessert_tiles"),
             this.map.addTilesetImage("tilemap_packed", "tilemap_tiles"),
-            this.map.addTilesetImage("cropped_backgrounds", "background_tiles")
+            this.map.addTilesetImage("crop_backgrounds_packed", "background_tiles")
         ];
 
         // Create a layer
@@ -117,9 +117,8 @@ class Platformer extends Phaser.Scene {
         my.sprite.player.setDepth(10);
 
         // Enable collision handling
-        this.physics.add.collider(my.sprite.player, this.bgLayer);
+        // Only collide with the platformLayer
         this.physics.add.collider(my.sprite.player, this.platformLayer);
-        this.physics.add.collider(my.sprite.player, this.prettyLayer);
 
 
         // Coin collect particle effect here
