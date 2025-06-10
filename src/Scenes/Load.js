@@ -73,6 +73,25 @@ class Load extends Phaser.Scene {
             ],
         });
 
+                // --- Enemy Animations ---
+        this.anims.create({
+            key: 'bug_walk',
+            frames: [
+                { key: 'platformer_characters', frame: 'tile_0018.png' },
+                { key: 'platformer_characters', frame: 'tile_0019.png' }
+            ],
+            frameRate: 6,
+            repeat: -1
+        });
+        this.anims.create({
+            key: 'bug_idle',
+            frames: [
+                { key: 'platformer_characters', frame: 'tile_0018.png' }
+            ],
+            frameRate: 1,
+            repeat: -1
+        });
+
          // ...and pass to the next Scene
          this.scene.start("Level1");
     }

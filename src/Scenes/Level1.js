@@ -21,7 +21,7 @@ class Level1 extends Phaser.Scene {
         this.tileset = [
             this.map.addTilesetImage("tilemap_packed_dessert", "dessert_tiles"),
             this.map.addTilesetImage("tilemap_packed", "tilemap_tiles"),
-            this.map.addTilesetImage("crop_backgrounds_packed", "background_tiles")
+            this.map.addTilesetImage("crop_backgrounds_packed", "background_tiles") 
         ];
 
         // Create layers
@@ -230,6 +230,74 @@ class Level1 extends Phaser.Scene {
         this.events.emit('updateHealth', this.playerHealth); // Ensure UI is updated at start
 
         this.scene.launch('UIScene'); // <-- Launch UIScene after assets are loaded
+
+        // --- Bug Enemy setup: pacing between x=333 and x=450 ---
+        this.bugEnemy = this.physics.add.sprite(333, 380, "platformer_characters", "tile_0018.png");
+        this.bugEnemy.setCollideWorldBounds(true);
+        this.bugEnemy.setVelocityX(60); // initial speed to the right
+        this.bugEnemy.maxX = 450;
+        this.bugEnemy.body.allowGravity = true;
+        this.bugEnemy.setDepth(10);
+        this.bugEnemy.setFlipX(true);
+
+        this.bugEnemy.anims.play('bug_walk');
+
+        // Enemy collides with platforms
+        this.physics.add.collider(this.bugEnemy, this.platformLayer);
+
+        // --- Player & Bug Enemy collision logic ---
+        this.physics.add.overlap(my.sprite.player, this.bugEnemy, (player, enemy) => {
+            // Shrink player hitbox for enemy collision
+            const playerHitbox = {
+                x: player.body.x + player.body.width * 0.15,
+                y: player.body.y + player.body.height * 0.15,
+                width: player.body.width * 0.7,
+                height: player.body.height * 0.7
+            };
+            const enemyHitbox = {
+                x: enemy.body.x,
+                y: enemy.body.y,
+                width: enemy.body.width,
+                height: enemy.body.height
+            };
+
+            // Check if player is falling and above enemy (stomp)
+            const playerBottom = player.body.y + player.body.height;
+            const enemyTop = enemy.body.y + 5; // small fudge for easier stomp
+            const playerFalling = player.body.velocity.y > 0;
+
+            // Axis-Aligned Bounding Box (AABB) overlap for smaller player hitbox
+            const overlap =
+                playerHitbox.x < enemyHitbox.x + enemyHitbox.width &&
+                playerHitbox.x + playerHitbox.width > enemyHitbox.x &&
+                playerHitbox.y < enemyHitbox.y + enemyHitbox.height &&
+                playerHitbox.y + playerHitbox.height > enemyHitbox.y;
+
+            if (playerFalling && playerBottom <= enemyTop + 10) {
+                // Stomp enemy: set frame to death, then disable after short delay
+                enemy.anims.stop();
+                enemy.setFrame('tile_0020.png');
+                enemy.body.enable = false;
+                this.time.delayedCall(350, () => {
+                    enemy.disableBody(true, true);
+                });
+                player.body.setVelocityY(this.JUMP_VELOCITY * 0.7); // Bounce player up a bit
+            } else if (overlap) {
+                // Player takes damage and respawns (like spikes)
+                if (this.playerHealth > 0) {
+                    this.playerHealth--;
+                    this.events.emit('updateHealth', this.playerHealth);
+                    if (this.playerHealth <= 0) {
+                        this.events.emit('updateHealth', this.playerHealth);
+                        this.scene.restart();
+                        return;
+                    }
+                }
+                player.setPosition(29, 350); // Reset player to spawn point
+                player.body.setVelocity(0, 0);
+            }
+        });
+
     }
 
     update() {
@@ -270,6 +338,52 @@ class Level1 extends Phaser.Scene {
         // Restart scene on R key
         if(Phaser.Input.Keyboard.JustDown(this.rKey)) {
             this.scene.restart();
+        }
+
+        // Bug Enemy pacing logic
+        if (this.bugEnemy && this.bugEnemy.active) {
+            // If stopped (velocity is 0), force a direction
+            if (this.bugEnemy.body.velocity.x === 0) {
+                // If blocked on left, go right; if blocked on right, go left; else pick right
+                if (this.bugEnemy.body.blocked.left) {
+                    this.bugEnemy.setVelocityX(60);
+                    this.bugEnemy.setFlipX(true);
+                } else if (this.bugEnemy.body.blocked.right) {
+                    this.bugEnemy.setVelocityX(-60);
+                    this.bugEnemy.setFlipX(false);
+                } else {
+                    // Not blocked, but stopped: pick a direction (default right)
+                    this.bugEnemy.setVelocityX(60);
+                    this.bugEnemy.setFlipX(true);
+                }
+            }
+            // Reverse direction if at min/max X
+            if (this.bugEnemy.x <= this.bugEnemy.minX) {
+                this.bugEnemy.setVelocityX(60);
+                this.bugEnemy.setFlipX(true);
+            } else if (this.bugEnemy.x >= this.bugEnemy.maxX) {
+                this.bugEnemy.setVelocityX(-60);
+                this.bugEnemy.setFlipX(false);
+            }
+            // Reverse direction if blocked by wall
+            if (this.bugEnemy.body.blocked.left) {
+                this.bugEnemy.setVelocityX(60);
+                this.bugEnemy.setFlipX(true);
+            } else if (this.bugEnemy.body.blocked.right) {
+                this.bugEnemy.setVelocityX(-60);
+                this.bugEnemy.setFlipX(false);
+            }
+
+            // Play walk animation if moving, idle if stopped
+            if (Math.abs(this.bugEnemy.body.velocity.x) > 0) {
+                if (this.bugEnemy.anims.currentAnim && this.bugEnemy.anims.currentAnim.key !== 'bug_walk') {
+                    this.bugEnemy.anims.play('bug_walk');
+                }
+            } else {
+                if (this.bugEnemy.anims.currentAnim && this.bugEnemy.anims.currentAnim.key !== 'bug_idle') {
+                    this.bugEnemy.anims.play('bug_idle');
+                }
+            }
         }
     }
 }
