@@ -167,7 +167,7 @@ class Level1 extends Phaser.Scene {
         this.physics.add.overlap(my.sprite.player, this.spikeGroup, () => {
             if (this.playerHealth > 0) {
                 this.playerHealth--;
-                this.events.emit('updateHealth', this.playerHealth);
+                this.events.emit('updateHealth', this.playerHealth); // Update UI on health change
                 if (this.playerHealth <= 0) {
                     // Emit health update before restart, then restart scene
                     this.events.emit('updateHealth', this.playerHealth);
@@ -227,7 +227,9 @@ class Level1 extends Phaser.Scene {
         // --- Health system setup ---
         this.playerMaxHealth = 3;
         this.playerHealth = this.playerMaxHealth;
-        this.events.emit('updateHealth', this.playerHealth);
+        this.events.emit('updateHealth', this.playerHealth); // Ensure UI is updated at start
+
+        this.scene.launch('UIScene'); // <-- Launch UIScene after assets are loaded
     }
 
     update() {

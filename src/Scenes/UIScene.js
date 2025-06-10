@@ -2,7 +2,7 @@ class UIScene extends Phaser.Scene
 {
     constructor ()
     {
-        super({ key: 'UIScene', active: true });
+        super({ key: 'UIScene' }); // <-- Remove 'active: true'
 
         this.score = 0;
 
@@ -17,37 +17,31 @@ class UIScene extends Phaser.Scene
     create ()
     {
 
-        // --- Donut Counter UI ---
+        // --- Donut Counter UI (top-right) ---
         this.donutIcon = this.add.image(0, 0, "dessert_sheet", 14)
-            .setOrigin(0, 1)
-            .setScale(1.2)
+            .setOrigin(1, 0) // top-right
+            .setScale(2)
             .setScrollFactor(0)
             .setDepth(1000);
 
-        this.donutText = this.add.text(0, 0, `x${this.donutsCollected}`,
-            { font: '28px Arial Black', fill: '#fff', stroke: '#000', strokeThickness: 4 })
-            .setOrigin(0, 1)
-            .setScrollFactor(0)
-            .setDepth(1000);
-
-        this.donutScoreBg = this.add.rectangle(0, 0, 120, 50, 0x000000, 0.5)
-            .setOrigin(0, 1)
-            .setScrollFactor(0)
-            .setDepth(999);
-
-        // --- Health Bar UI ---
-        // Use frame 0 for full heart, 1 for empty heart (adjust as needed)
-        const FULL_HEART_FRAME = 44;   // Change to correct frame index for full heart
-        const EMPTY_HEART_FRAME = 46;  // Change to correct frame index for empty heart
-
+        // --- Health Bar UI (top-left) ---
+        this.heartIcons = [];
         for (let i = 0; i < this.playerMaxHealth; i++) {
-            let heart = this.add.image(0, 0, "tilemap_sheet", FULL_HEART_FRAME)
-                .setOrigin(0, 1)
-                .setScale(1.2)
+            let heart = this.add.image(0, 0, "tilemap_sheet", 44)
+                .setOrigin(0, 0) // top-left
+                .setScale(2)
                 .setScrollFactor(0)
                 .setDepth(1000);
             this.heartIcons.push(heart);
         }
+        
+        this.donutText = this.add.text(0, 0, `x${this.donutsCollected}`,
+            { font: '18px Arial Black', fill: '#fff', stroke: '#000', strokeThickness: 4 })
+            .setOrigin(1, 0) // top-right
+            .setScrollFactor(0)
+            .setDepth(1000);
+
+
 
         // Initial UI update
         this.updateDonutUI();
@@ -76,46 +70,31 @@ class UIScene extends Phaser.Scene
     }
 
     updateDonutUI() {
-        // Layout donut UI at bottom-left, after hearts
+        // --- Donut Counter UI (top-right) ---
         const cam = this.cameras.main;
-        const heartMargin = 20;
-        const donutIconSpacing = 20;
+        const margin = 20;
         const donutTextSpacing = 8;
-        const donutBgPadding = 10;
 
-        // Heart icons width
-        let heartWidth = this.heartIcons.length > 0 ? this.heartIcons[0].displayWidth : 0;
-        let donutIconX = cam.worldView.left + heartMargin + this.heartIcons.length * (heartWidth + 10) + donutIconSpacing;
-        let donutIconY = cam.worldView.bottom - heartMargin;
+        // Place donutIcon in top-right
+        this.donutIcon.x = cam.worldView.right - margin;
+        this.donutIcon.y = cam.worldView.top + margin;
 
-        this.donutIcon.x = donutIconX;
-        this.donutIcon.y = donutIconY;
-
-        this.donutText.x = this.donutIcon.x + this.donutIcon.displayWidth + donutTextSpacing;
-        this.donutText.y = this.donutIcon.y + this.donutIcon.displayHeight/2 - this.donutText.displayHeight/2;
-
-        // Adjust background to fit icon and text
-        const donutBgWidth = (this.donutText.x + this.donutText.displayWidth) - this.donutIcon.x + donutBgPadding * 2;
-        const donutBgHeight = Math.max(this.donutIcon.displayHeight, this.donutText.displayHeight) + donutBgPadding * 2;
-        this.donutScoreBg.displayWidth = donutBgWidth;
-        this.donutScoreBg.displayHeight = donutBgHeight;
-        this.donutScoreBg.x = this.donutIcon.x - donutBgPadding;
-        this.donutScoreBg.y = this.donutIcon.y + donutBgPadding;
+        // Place donutText to the left of donutIcon
+        this.donutText.x = this.donutIcon.x - this.donutIcon.displayWidth - donutTextSpacing;
+        this.donutText.y = this.donutIcon.y;
     }
 
     updateHeartsUI() {
+        // --- Health Bar UI (top-left) ---
         const cam = this.cameras.main;
-        const heartMargin = 20;
-        const FULL_HEART_FRAME = 44;   // Change to correct frame index for full heart
-        const EMPTY_HEART_FRAME = 46;  // Change to correct frame index for empty heart
+        const margin = 20;
         for (let i = 0; i < this.heartIcons.length; i++) {
-            this.heartIcons[i].x = cam.worldView.left + heartMargin + i * (this.heartIcons[i].displayWidth + 10);
-            this.heartIcons[i].y = cam.worldView.bottom - heartMargin;
+            this.heartIcons[i].x = cam.worldView.left + margin + i * (this.heartIcons[i].displayWidth + 10);
+            this.heartIcons[i].y = cam.worldView.top + margin;
             if (i < this.playerHealth) {
-                this.heartIcons[i].setFrame(FULL_HEART_FRAME);
                 this.heartIcons[i].setAlpha(1);
             } else {
-                this.heartIcons[i].setFrame(EMPTY_HEART_FRAME);
+                this.heartIcons[i].setFrame(46);
                 this.heartIcons[i].setAlpha(1);
             }
         }
@@ -137,7 +116,6 @@ class UIScene extends Phaser.Scene
                 });
                 level1.events.on('setMaxHealth', (max) => {
                     this.playerMaxHealth = max;
-                    // (Recreate hearts if needed)
                 });
                 this._eventsHooked = true;
             }
