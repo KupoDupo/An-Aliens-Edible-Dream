@@ -123,6 +123,49 @@ class Level1 extends Phaser.Scene {
             this.events.emit('updateDonuts', this.donutsCollected);
         });
 
+        // Create heart sprites from map objects
+        this.hearts = heartObjects.map(obj => {
+            const heart = this.add.sprite(obj.x, obj.y, "tilemap_sheet", 44);
+            // Add pulse animation: scale between 1 and 1.3
+            this.tweens.add({
+                targets: heart,
+                scale: 1.3,
+                duration: 400,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+                delay: Phaser.Math.Between(0, 200) // randomize for variety
+            });
+            obj.destroy();
+            return heart;
+        });
+        this.physics.world.enable(this.hearts, Phaser.Physics.Arcade.STATIC_BODY);
+        this.heartGroup = this.add.group(this.hearts);
+
+        // Heart collect particle effect (optional, similar to donut)
+        my.vfx.heartCollect = this.add.particles(0, 0, "kenny-particles", {
+            frame: ['light_01.png', 'light_02.png', 'light_03.png'],
+            scale: { start: 0.03, end: 0.1 },
+            lifespan: 500,
+            alpha: { start: 1, end: 0.1 },
+        });
+        my.vfx.heartCollect.stop();
+
+        // Heart collision handler
+        this.physics.add.overlap(my.sprite.player, this.heartGroup, (obj1, obj2) => {
+            // Only allow collection if playerHealth < 3
+            if (this.playerHealth < 3) {
+                obj2.destroy();
+                my.vfx.heartCollect.emitParticle(1, obj2.x, obj2.y);
+                if (this.heartPickupSound) this.heartPickupSound.play({ volume: 1.0 });
+
+                // Increase health by 1, up to a max of 3
+                this.playerHealth = Math.min(this.playerHealth + 1, 3);
+                this.events.emit('updateHealth', this.playerHealth);
+            }
+            // If at max health (3), do nothing (heart remains)
+        });
+
         // --- One-way platforms setup ---
         this.onewayPlatforms = [];
         this.platformLayer.forEachTile(tile => {
@@ -318,8 +361,9 @@ class Level1 extends Phaser.Scene {
         // Death sound effect (was spikeHitSound)
         this.deathSound = this.sound.add("spikeHit");
 
-        // Donut pickup sound effect
+        // Pickup sound effects
         this.donutPickupSound = this.sound.add("donutPickup");
+        this.heartPickupSound = this.sound.add("heartPickup");
 
     }
 

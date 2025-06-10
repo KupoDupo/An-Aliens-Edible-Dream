@@ -12,10 +12,13 @@ class Load extends Phaser.Scene {
         this.load.image("dessert_tiles", "dessert.png");                         // Packed tilemap
 
         this.load.image("background_tiles", "crop_backgrounds_packed.png");
+
+        this.load.image("shipGreen", "shipGreen.png");
         
         // Load tilemap information
-        this.load.image("tilemap_tiles", "tilemap_packed.png");                         // Packed tilemap
-        this.load.tilemapTiledJSON("platformer-final-lvl1", "platformer-final-lvl1.tmj");   // Tilemap in JSON
+        this.load.image("tilemap_tiles", "tilemap_packed.png");
+        this.load.tilemapTiledJSON("platformer-final-lvl1", "platformer-final-lvl1.tmj");
+        this.load.tilemapTiledJSON("platformer-final-lvl2", "platformer-final-lvl2.tmj");
 
         // Load the tilemap as a spritesheet
         this.load.spritesheet("tilemap_sheet", "tilemap_packed.png", {
@@ -46,8 +49,9 @@ class Load extends Phaser.Scene {
         // Load spike hit sound effect
         this.load.audio("spikeHit", "impactMining_000.ogg");
 
-        // Load donut pickup sound effect
+        // Load pickup sound effect
         this.load.audio("donutPickup", "impactTin_medium_000.ogg");
+        this.load.audio("heartPickup", "jingles_NES03.ogg")
     }
 
     create() {

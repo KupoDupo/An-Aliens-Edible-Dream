@@ -1,35 +1,30 @@
 class Level2 extends Phaser.Scene {
     constructor() {
         super("Level2");
-        
     }
 
     init() {
         // variables and settings
         this.ACCELERATION = 250; // reduced for more controlled movement
-        this.DRAG = 1200;        // increased for less sliding
+        this.DRAG = 1200;       // increased for less sliding
         this.physics.world.gravity.y = 1200; // reduced gravity for slower fall
         this.JUMP_VELOCITY = -400; // less negative for slower, higher jump
         this.PARTICLE_VELOCITY = 50;
-        this.SCALE = 2.0;
+        this.SCALE = 2.0; // This is the camera zoom scale (e.g., 2.0 for 2x zoom)
     }
 
     create() {
-        // Create a new tilemap game object which uses 18x18 pixel tiles, and is
-        // 45 tiles wide and 25 tiles tall.
-        // this.map = this.add.tilemap("platformer-level-1", 18, 18, 45, 25);
-        this.map = this.add.tilemap("platformer-final-lvl1");
+        // Create a new tilemap game object
+        this.map = this.add.tilemap("platformer-final-lvl2");
 
-        // Add a tileset to the map
-        // First parameter: name we gave the tileset in Tiled
-        // Second parameter: key for the tilesheet (from this.load.image in Load.js)
+        // Add tilesets to the map
         this.tileset = [
             this.map.addTilesetImage("tilemap_packed_dessert", "dessert_tiles"),
             this.map.addTilesetImage("tilemap_packed", "tilemap_tiles"),
-            this.map.addTilesetImage("crop_backgrounds_packed", "background_tiles")
+            this.map.addTilesetImage("crop_backgrounds_packed", "background_tiles") 
         ];
 
-        // Create a layer
+        // Create layers
         this.bgLayer = this.map.createLayer("Backgrounds", this.tileset, 0, 0);
         this.platformLayer = this.map.createLayer("Platforms", this.tileset, 0, 0);
         this.prettyLayer = this.map.createLayer("Pretty-Stuffs", this.tileset, 0, 0);
@@ -42,41 +37,41 @@ class Level2 extends Phaser.Scene {
             this.map.heightInPixels
         );
 
-        // Make it collidable
-        // Remove collision from bgLayer to avoid invisible walls
-        // this.bgLayer.setCollisionByProperty({
-        //     collides: true
-        // });
-
+        // Make platforms collidable
         this.platformLayer.setCollisionByProperty({
             collides: true
         });
-
-/*         this.prettyLayer.setCollisionByProperty({
-            collides: true
-        }); */
         // Explicitly clear collision on prettyLayer to avoid invisible walls
         this.prettyLayer.setCollision(false);
 
-        // Create coins from Objects layer in tilemap
-        this.coins = this.map.createFromObjects("Donuts-Candy", {
-            name: "coin",
+        const heartObjects = this.map.createFromObjects("Donuts-Candy", {
+            name: "heart",
             key: "tilemap_sheet",
-            frame: 151
-        });
+            frame: 44,
+        })
 
-        this.donuts = this.map.createFromObjects("Donuts-Candy", {
+        // Collect donut object data and create Sprites:
+        const donutObjects = this.map.createFromObjects("Donuts-Candy", {
             name: "donut",
             key: "dessert_sheet",
-            frame: 14
         });
 
-        this.physics.world.enable(this.coins, Phaser.Physics.Arcade.STATIC_BODY);
-        this.physics.world.enable(this.donuts, Phaser.Physics.Arcade.STATIC_BODY);
+        // Define donut animation
+        this.anims.create({
+            key: 'donut_spin',
+            frames: this.anims.generateFrameNumbers('dessert_sheet', { start: 13, end: 14 }),
+            frameRate: 2,
+            repeat: -1
+        });
 
-        // Create a Phaser group out of the array this.coins
-        // This will be used for collision detection below.
-        this.coinGroup = this.add.group(this.coins);
+        // Replace donuts with Sprites that can animate
+        this.donuts = donutObjects.map(obj => {
+            const donut = this.add.sprite(obj.x, obj.y, "dessert_sheet", 14);
+            donut.anims.play('donut_spin');
+            obj.destroy(); // Remove the original static image from the map
+            return donut;
+        });
+        this.physics.world.enable(this.donuts, Phaser.Physics.Arcade.STATIC_BODY);
         this.donutGroup = this.add.group(this.donuts);
 
         // --- Spikes setup ---
@@ -84,104 +79,91 @@ class Level2 extends Phaser.Scene {
             name: "spike"
         });
         this.physics.world.enable(this.spikes, Phaser.Physics.Arcade.STATIC_BODY);
-        // Make all spike objects invisible (see-thru collision box)
-        this.spikes.forEach(obj => obj.visible = false);
+        this.spikes.forEach(obj => obj.visible = false); // Make spike objects invisible
         this.spikeGroup = this.add.group(this.spikes);
 
-        // Find water tiles
-        /* this.waterTiles = this.groundLayer.filterTiles(tile => {
-            return tile.properties.water == true;
-        });*/
-
-        ////////////////////
-        // Water bubble particle effect here
-        // It's OK to have it start running (what I did)
-        ////////////////////
-        // flame_01.png (1-4) would be good for water bubbling
-        // use let water of this.waterTiles not let water in this.waterTiles since former gets you the actual water tile while the latter gets you the index in the array 
-        // have to say water.pixelX and water.pixelY to get the pixel coordinates of the tile
-        // water.x and water.y are the tilemap coordinates (in tiles) of the tile - won't reflect actual position in game
-        /*my.vfx.waterBubbling = [];
-        for (let water of this.waterTiles) {
-            let centerX = water.pixelX + this.map.tileWidth / 2;
-            let centerY = water.pixelY + this.map.tileHeight / 2;
-            let emitter = this.add.particles(centerX, centerY, "kenny-particles", {
-                    frame: ['circle_01.png', 'circle_02.png', 'circle_03.png'],
-                    random: true, // tells Phaser to randomly pick a frame from the frame array for each particle emitted - helps it look more natural
-                    scale: {start: 0.03, end: 0.07},
-                    lifespan: 800,
-                    alpha: {start: 1, end: 0.1},
-                    emitting: false, // don't emit continuously - why it looked so bad at first
-                    speedY: { min: -40, max: -80 }, // speed of particles in y direction - negative because we want them to go up
-                    gravityY: 0, // no gravity on particles - phaser's world gravity set in this file pulls all physics objects down but we don't want that to happen here 
-                });
-                my.vfx.waterBubbling.push(emitter);
-        }
-
-        this.time.addEvent({
-            delay: 50, // how often to bubble up (ms)
-            loop:true,
-            callback: () => {
-                if (my.vfx.waterBubbling.length > 0) {
-                    let emitter = Phaser.Utils.Array.GetRandom(my.vfx.waterBubbling);
-                    emitter.explode(Phaser.Math.Between(1, 3));
-                }
-            }
-        })*/
-
-
         // set up player avatar
-        my.sprite.player = this.physics.add.sprite(29, 350, "platformer_characters", "tile_0004.png");
+        my.sprite.player = this.physics.add.sprite(15, 276, "platformer_characters", "tile_0004.png");
         my.sprite.player.setCollideWorldBounds(true); // Enable world bounds collision
         my.sprite.player.setDepth(10);
 
-        // Enable collision handling
-        // Only collide with the platformLayer
+        // Enable collision handling between player and platforms
         this.physics.add.collider(my.sprite.player, this.platformLayer);
 
-
-        // Coin collect particle effect here
-        // Important: make sure it's not running
-        // "light_03.png" (1-3) would be good for coin collect
-        // parameters: 0, 0 are the initial x and y position of the particle emitter (don't matter cause we pause it immediately and adjust these to other places when we call again)
-        // "kenny-particles" is the key of the particle texture atlas (or can be the image to use for the particles) - must be preloaded 
-        // the {} is the configuration object for the emitter (if empty it uses all default settings - isn't empty here cause we create our own settings for the vfx)
-        my.vfx.coinCollect = this.add.particles(0,0, "kenny-particles", {
+        // Coin collect particle effect
+        my.vfx.coinCollect = this.add.particles(0, 0, "kenny-particles", {
             frame: ['light_01.png', 'light_02.png', 'light_03.png'],
-            scale: {start: 0.03, end: 0.1},
+            scale: { start: 0.03, end: 0.1 },
             lifespan: 500,
-            alpha: {start: 1, end: 0.1},
+            alpha: { start: 1, end: 0.1 },
         });
-        // Stop it immediately - don't want it running 24/7 just during collision which is handled in arrow function below
         my.vfx.coinCollect.stop();
-
 
         // Coin collision handler
         this.physics.add.overlap(my.sprite.player, this.coinGroup, (obj1, obj2) => {
             obj2.destroy(); // remove coin on overlap
-            // Start the coin collect particle effect here
-            // This line emits (creates) one particle from the coinCollect particle emitter 
-            // at the position (x,y) of obj2 (the collected coin)
             my.vfx.coinCollect.emitParticle(1, obj2.x, obj2.y);
         });
 
-        my.vfx.donutCollect = this.add.particles(0,0, "kenny-particles", {
+        // Donut collect particle effect
+        my.vfx.donutCollect = this.add.particles(0, 0, "kenny-particles", {
             frame: ['light_01.png', 'light_02.png', 'light_03.png'],
-            scale: {start: 0.03, end: 0.1},
+            scale: { start: 0.03, end: 0.1 },
             lifespan: 500,
-            alpha: {start: 1, end: 0.1},
+            alpha: { start: 1, end: 0.1 },
         });
-        // Stop it immediately - don't want it running 24/7 just during collision which is handled in arrow function below
         my.vfx.donutCollect.stop();
 
-
-        // Coin collision handler
+        // Donut collision handler
         this.physics.add.overlap(my.sprite.player, this.donutGroup, (obj1, obj2) => {
-            obj2.destroy(); // remove coin on overlap
-            // Start the coin collect particle effect here
-            // This line emits (creates) one particle from the coinCollect particle emitter 
-            // at the position (x,y) of obj2 (the collected coin)
+            obj2.destroy();
             my.vfx.donutCollect.emitParticle(1, obj2.x, obj2.y);
+            if (this.donutPickupSound) this.donutPickupSound.play({ volume: 1.0 }); // louder
+            this.donutsCollected++;
+            this.events.emit('updateDonuts', this.donutsCollected);
+        });
+
+        // Create heart sprites from map objects
+        this.hearts = heartObjects.map(obj => {
+            const heart = this.add.sprite(obj.x, obj.y, "tilemap_sheet", 44);
+            // Add pulse animation: scale between 1 and 1.3
+            this.tweens.add({
+                targets: heart,
+                scale: 1.3,
+                duration: 400,
+                yoyo: true,
+                repeat: -1,
+                ease: 'Sine.easeInOut',
+                delay: Phaser.Math.Between(0, 200) // randomize for variety
+            });
+            obj.destroy();
+            return heart;
+        });
+        this.physics.world.enable(this.hearts, Phaser.Physics.Arcade.STATIC_BODY);
+        this.heartGroup = this.add.group(this.hearts);
+
+        // Heart collect particle effect (optional, similar to donut)
+        my.vfx.heartCollect = this.add.particles(0, 0, "kenny-particles", {
+            frame: ['light_01.png', 'light_02.png', 'light_03.png'],
+            scale: { start: 0.03, end: 0.1 },
+            lifespan: 500,
+            alpha: { start: 1, end: 0.1 },
+        });
+        my.vfx.heartCollect.stop();
+
+        // Heart collision handler
+        this.physics.add.overlap(my.sprite.player, this.heartGroup, (obj1, obj2) => {
+            // Only allow collection if playerHealth < 3
+            if (this.playerHealth < 3) {
+                obj2.destroy();
+                my.vfx.heartCollect.emitParticle(1, obj2.x, obj2.y);
+                if (this.heartPickupSound) this.heartPickupSound.play({ volume: 1.0 });
+
+                // Increase health by 1, up to a max of 3
+                this.playerHealth = Math.min(this.playerHealth + 1, 3);
+                this.events.emit('updateHealth', this.playerHealth);
+            }
+            // If at max health (3), do nothing (heart remains)
         });
 
         // --- One-way platforms setup ---
@@ -205,14 +187,12 @@ class Level2 extends Phaser.Scene {
         this.events.on('update', () => {
             for (let platform of this.onewayPlatforms) {
                 let player = my.sprite.player;
-                // Check if player is falling and feet are above the platform
                 if (
                     player.body.velocity.y > 0 &&
                     player.body.bottom <= platform.body.top + 5 &&
                     player.body.right > platform.body.left &&
                     player.body.left < platform.body.right
                 ) {
-                    // If player is overlapping the platform horizontally and falling onto it
                     if (
                         player.body.bottom + player.body.velocity.y * this.game.loop.delta / 1000 >= platform.body.top
                     ) {
@@ -225,18 +205,49 @@ class Level2 extends Phaser.Scene {
             }
         });
 
-
-        // --- Spike collision: reset player to spawn point ---
+        // --- Spike collision: reset player to spawn point and lose health ---
         this.physics.add.overlap(my.sprite.player, this.spikeGroup, () => {
-            // Reset player to spawn point (change as needed)
-            my.sprite.player.setPosition(29, 350);
+            if (this.deathSound) this.deathSound.play({ volume: 0.7 });
+            if (this.playerHealth > 0) {
+                this.playerHealth--;
+                this.events.emit('updateHealth', this.playerHealth); // Update UI on health change
+                if (this.playerHealth <= 0) {
+                    // Emit health update before restart, then restart scene
+                    this.events.emit('updateHealth', this.playerHealth);
+                    this.scene.restart();
+                    return;
+                }
+            }
+            my.sprite.player.setPosition(15, 276); // Reset player to spawn point
             my.sprite.player.body.setVelocity(0, 0);
         });
 
+        // --- Exit setup ---
+        this.exits = this.map.createFromObjects("Donuts-Candy", {
+            name: "exit",
+            key: "shipGreen"
+            // frame property removed since shipGreen is a single image
+        });
+        this.physics.world.enable(this.exits, Phaser.Physics.Arcade.STATIC_BODY);
+        this.exitGroup = this.add.group(this.exits);
+
+        // Make exit images smaller
+        this.exits.forEach(exit => {
+            exit.setScale(0.5); // or adjust to your preferred size
+            if (exit.body) {
+                exit.body.width *= 0.5;
+                exit.body.height *= 0.5;
+                exit.body.updateFromGameObject();
+            }
+        });
+
+        // --- Exit overlap: transfer to Level2 ---
+        this.physics.add.overlap(my.sprite.player, this.exitGroup, () => {
+            this.scene.start("Level2");
+        });
 
         // set up Phaser-provided cursor key input
         cursors = this.input.keyboard.createCursorKeys();
-
         this.rKey = this.input.keyboard.addKey('R');
 
         // debug key listener (assigned to D key)
@@ -247,73 +258,153 @@ class Level2 extends Phaser.Scene {
             }
         }, this);
 
-        // Movement vfx here
+        // Movement vfx
         my.vfx.walking = this.add.particles(0, 0, "kenny-particles", {
             frame: ['smoke_03.png', 'smoke_09.png'],
-            // TODO: Try: add random: true
-            scale: {start: 0.03, end: 0.1},
-            // TODO: Try: maxAliveParticles: 8,
+            scale: { start: 0.03, end: 0.1 },
             lifespan: 350,
-            // TODO: Try: gravityY: -400,
-            alpha: {start: 1, end: 0.1}, 
+            alpha: { start: 1, end: 0.1 }, 
         });
-
         my.vfx.walking.stop();
         
-
         // Simple camera to follow player
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
-        this.cameras.main.startFollow(my.sprite.player, true, 0.25, 0.25); // (target, [,roundPixels][,lerpX][,lerpY])
+        this.cameras.main.startFollow(my.sprite.player, true, 0.25, 0.25);
         this.cameras.main.setDeadzone(50, 50);
-        this.cameras.main.setZoom(this.SCALE);
-        
+        this.cameras.main.setZoom(this.SCALE); // Camera zoom is 2.0
+
+        // Donut counter setup
+        this.donutsCollected = 0;
+        this.events.emit('updateDonuts', this.donutsCollected);
+
+        // --- Health system setup ---
+        this.playerMaxHealth = 3;
+        this.playerHealth = this.playerMaxHealth;
+        this.events.emit('updateHealth', this.playerHealth); // Ensure UI is updated at start
+
+        this.scene.launch('UIScene'); // <-- Launch UIScene after assets are loaded
+
+        // --- Bug Enemy setup: pacing between x=333 and x=450 ---
+        this.bugEnemy = this.physics.add.sprite(333, 380, "platformer_characters", "tile_0018.png");
+        this.bugEnemy.setCollideWorldBounds(true);
+        this.bugEnemy.setVelocityX(60); // initial speed to the right
+        this.bugEnemy.maxX = 450;
+        this.bugEnemy.minX = 333; // <-- add this line to avoid undefined
+        this.bugEnemy.body.allowGravity = true;
+        this.bugEnemy.setDepth(10);
+        this.bugEnemy.setFlipX(true);
+
+        // Only play bug_walk if the animation exists
+        if (this.anims.exists('bug_walk')) {
+            this.bugEnemy.anims.play('bug_walk');
+        }
+
+        // Enemy collides with platforms
+        this.physics.add.collider(this.bugEnemy, this.platformLayer);
+
+        // --- Player & Bug Enemy collision logic ---
+        this.physics.add.overlap(my.sprite.player, this.bugEnemy, (player, enemy) => {
+            // Shrink player hitbox for enemy collision
+            const playerHitbox = {
+                x: player.body.x + player.body.width * 0.15,
+                y: player.body.y + player.body.height * 0.15,
+                width: player.body.width * 0.7,
+                height: player.body.height * 0.7
+            };
+            const enemyHitbox = {
+                x: enemy.body.x,
+                y: enemy.body.y,
+                width: enemy.body.width,
+                height: enemy.body.height
+            };
+
+            // Check if player is falling and above enemy (stomp)
+            const playerBottom = player.body.y + player.body.height;
+            const enemyTop = enemy.body.y + 5; // small fudge for easier stomp
+            const playerFalling = player.body.velocity.y > 0;
+
+            // Axis-Aligned Bounding Box (AABB) overlap for smaller player hitbox
+            const overlap =
+                playerHitbox.x < enemyHitbox.x + enemyHitbox.width &&
+                playerHitbox.x + playerHitbox.width > enemyHitbox.x &&
+                playerHitbox.y < enemyHitbox.y + enemyHitbox.height &&
+                playerHitbox.y + playerHitbox.height > enemyHitbox.y;
+
+            if (playerFalling && playerBottom <= enemyTop + 10) {
+                // Stomp enemy: set frame to death, then disable after short delay
+                enemy.anims.stop();
+                enemy.setFrame('tile_0020.png');
+                enemy.body.enable = false;
+                if (this.bugDeathSound) this.bugDeathSound.play({ volume: 0.7 });
+                this.time.delayedCall(350, () => {
+                    enemy.disableBody(true, true);
+                });
+                player.body.setVelocityY(this.JUMP_VELOCITY * 0.7); // Bounce player up a bit
+            } else if (overlap) {
+                // Player takes damage and respawns (like spikes)
+                if (this.deathSound) this.deathSound.play({ volume: 0.7 });
+                if (this.playerHealth > 0) {
+                    this.playerHealth--;
+                    this.events.emit('updateHealth', this.playerHealth);
+                    if (this.playerHealth <= 0) {
+                        this.events.emit('updateHealth', this.playerHealth);
+                        this.scene.restart();
+                        return;
+                    }
+                }
+                player.setPosition(15, 276); // Reset player to spawn point
+                player.body.setVelocity(0, 0);
+            }
+        });
+
+        // Walking sound effects
+        this.footstepSounds = [
+            this.sound.add("footstep1"),
+            this.sound.add("footstep2")
+        ];
+        this.lastFootstepTime = 0;
+        this.footstepInterval = 220; // ms between footsteps
+
+        // Bug death sound effect
+        this.bugDeathSound = this.sound.add("bugDeath");
+
+        // Death sound effect (was spikeHitSound)
+        this.deathSound = this.sound.add("spikeHit");
+
+        // Pickup sound effects
+        this.donutPickupSound = this.sound.add("donutPickup");
+        this.heartPickupSound = this.sound.add("heartPickup");
 
     }
 
     update() {
+        // Player movement and animation logic
         if(cursors.left.isDown) {
             my.sprite.player.setAccelerationX(-this.ACCELERATION);
             my.sprite.player.resetFlip();
             my.sprite.player.anims.play('walk', true);
-            // Particle following code here
-            //This controls the emitter to follow the player avatar - set emitter location to right hand side of avatar (moving left, emit right)
-            // set the offset location to be just above ground level (my.sprite.player.displayHeight/2-5) and just by avatar's feet (my.sprite.player.displayWidth/2-10)
             my.vfx.walking.startFollow(my.sprite.player, my.sprite.player.displayWidth/2-10, my.sprite.player.displayHeight/2-5, false);
-            // speed of particles is positive because we want them to move right (positive x direction)
             my.vfx.walking.setParticleSpeed(this.PARTICLE_VELOCITY, 0);
-            // Only play smoke effect if touching the ground - don't want player emitting smoke changing direction in air
-            // he does emit this smoke when he jumps though which makes it look like he's farting and it propels him lmao 
             if (my.sprite.player.body.blocked.down) {
-
                 my.vfx.walking.start();
-
             }
-
         } else if(cursors.right.isDown) {
             my.sprite.player.setAccelerationX(this.ACCELERATION);
             my.sprite.player.setFlip(true, false);
             my.sprite.player.anims.play('walk', true);
-            // Particle following code here
             my.vfx.walking.startFollow(my.sprite.player, -my.sprite.player.displayWidth/2-10, my.sprite.player.displayHeight/2-5, false);
-            // speed of particles is negative because we want them to move left (negative x direction)
             my.vfx.walking.setParticleSpeed(-this.PARTICLE_VELOCITY, 0);
             if (my.sprite.player.body.blocked.down) {
-
                 my.vfx.walking.start();
-
             }
-
         } else {
-            // Set acceleration to 0 and have DRAG take over
             my.sprite.player.setAccelerationX(0);
             my.sprite.player.setDragX(this.DRAG);
             my.sprite.player.anims.play('idle');
-            // Have the vfx stop playing
             my.vfx.walking.stop();
         }
 
-        // player jump
-        // note that we need body.blocked rather than body.touching b/c the former applies to tilemap tiles and the latter to the "ground"
+        // Player jump logic
         if(!my.sprite.player.body.blocked.down) {
             my.sprite.player.anims.play('jump');
         }
@@ -321,14 +412,67 @@ class Level2 extends Phaser.Scene {
             my.sprite.player.body.setVelocityY(this.JUMP_VELOCITY);
         }
 
+        // Restart scene on R key
         if(Phaser.Input.Keyboard.JustDown(this.rKey)) {
             this.scene.restart();
         }
 
-        // Transition to Level2 when player reaches the right edge of the map
-        if (my.sprite.player.x >= this.map.widthInPixels-1) {
-            this.scene.start("Level2");
-            return;
+        // Bug Enemy pacing logic
+        if (this.bugEnemy && this.bugEnemy.active) {
+            // If stopped (velocity is 0), force a direction
+            if (this.bugEnemy.body.velocity.x === 0) {
+                // If blocked on left, go right; if blocked on right, go left; else pick right
+                if (this.bugEnemy.body.blocked.left) {
+                    this.bugEnemy.setVelocityX(60);
+                    this.bugEnemy.setFlipX(true);
+                } else if (this.bugEnemy.body.blocked.right) {
+                    this.bugEnemy.setVelocityX(-60);
+                    this.bugEnemy.setFlipX(false);
+                } else {
+                    // Not blocked, but stopped: pick a direction (default right)
+                    this.bugEnemy.setVelocityX(60);
+                    this.bugEnemy.setFlipX(true);
+                }
+            }
+            // Reverse direction if at min/max X
+            if (this.bugEnemy.x <= this.bugEnemy.minX) {
+                this.bugEnemy.setVelocityX(60);
+                this.bugEnemy.setFlipX(true);
+            } else if (this.bugEnemy.x >= this.bugEnemy.maxX) {
+                this.bugEnemy.setVelocityX(-60);
+                this.bugEnemy.setFlipX(false);
+            }
+            // Reverse direction if blocked by wall
+            if (this.bugEnemy.body.blocked.left) {
+                this.bugEnemy.setVelocityX(60);
+                this.bugEnemy.setFlipX(true);
+            } else if (this.bugEnemy.body.blocked.right) {
+                this.bugEnemy.setVelocityX(-60);
+                this.bugEnemy.setFlipX(false);
+            }
+
+            // Play walk animation if moving, idle if stopped
+            if (Math.abs(this.bugEnemy.body.velocity.x) > 0) {
+                if (this.bugEnemy.anims.currentAnim && this.bugEnemy.anims.currentAnim.key !== 'bug_walk') {
+                    this.bugEnemy.anims.play('bug_walk');
+                }
+            } else {
+                if (this.bugEnemy.anims.currentAnim && this.bugEnemy.anims.currentAnim.key !== 'bug_idle') {
+                    this.bugEnemy.anims.play('bug_idle');
+                }
+            }
+        }
+
+        // Play walking sound effect if moving on ground
+        if (
+            (cursors.left.isDown || cursors.right.isDown) &&
+            my.sprite.player.body.blocked.down
+        ) {
+            const now = this.time.now;
+            if (now - this.lastFootstepTime > this.footstepInterval) {
+                Phaser.Utils.Array.GetRandom(this.footstepSounds).play({ volume: 0.5 });
+                this.lastFootstepTime = now;
+            }
         }
     }
 }
