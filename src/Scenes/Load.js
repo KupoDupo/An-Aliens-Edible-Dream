@@ -115,7 +115,7 @@ class Load extends Phaser.Scene {
         })
 
          // ...and pass to the next Scene
-         this.scene.start("Level2");
+         this.scene.start("Level1");
     }
 
     // Never get here since a new scene is started in create()

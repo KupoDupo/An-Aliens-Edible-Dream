@@ -158,8 +158,6 @@ class Level2 extends Phaser.Scene {
                 obj2.destroy();
                 my.vfx.heartCollect.emitParticle(1, obj2.x, obj2.y);
                 if (this.heartPickupSound) this.heartPickupSound.play({ volume: 1.0 });
-
-                // Increase health by 1, up to a max of 3
                 this.playerHealth = Math.min(this.playerHealth + 1, 3);
                 this.events.emit('updateHealth', this.playerHealth);
             }
@@ -240,9 +238,9 @@ class Level2 extends Phaser.Scene {
             }
         });
 
-        // --- Exit overlap: transfer to Level2 ---
+        // --- Exit overlap: transfer to Ending ---
         this.physics.add.overlap(my.sprite.player, this.exitGroup, () => {
-            this.scene.start("Level2");
+            this.scene.start("Ending", { donutsCollected: this.donutsCollected });
         });
 
         // set up Phaser-provided cursor key input
@@ -323,6 +321,55 @@ class Level2 extends Phaser.Scene {
             this.shootEnemy.anims.play('shoot_idle');
         }
         this.physics.add.collider(this.shootEnemy, this.platformLayer);
+
+        // --- Second Shoot Enemy setup: idle at (1537, 326) ---
+        this.shootEnemy2 = this.physics.add.sprite(1537, 326, "platformer_characters", "tile_0005.png");
+        this.shootEnemy2.setCollideWorldBounds(true);
+        this.shootEnemy2.body.allowGravity = true;
+        this.shootEnemy2.setDepth(10);
+        if (this.anims.exists('shoot_idle')) {
+            this.shootEnemy2.anims.play('shoot_idle');
+        }
+        this.physics.add.collider(this.shootEnemy2, this.platformLayer);
+
+        // --- Shoot Enemy Projectile Setup ---
+        this.shootProjectiles = this.physics.add.group();
+        this.shootEnemyLastFired = 0;
+        this.shootEnemyFireInterval = 5000; // 5 seconds
+
+        // --- Second Shoot Enemy Projectile Setup ---
+        this.shootEnemy2LastFired = 0;
+        this.shootEnemy2FireInterval = 5000; // 5 seconds
+
+        // --- Pipe setup ---
+        this.pipes = this.map.createFromObjects("Donuts-Candy", {
+            name: "pipe"
+        });
+        this.pipes.forEach(obj => obj.visible = false);
+        this.physics.world.enable(this.pipes, Phaser.Physics.Arcade.STATIC_BODY);
+        this.pipeGroup = this.add.group(this.pipes);
+
+        // --- Pipe overlap: transfer to oceanFloor.js ---
+        this.physics.add.overlap(my.sprite.player, this.pipeGroup, () => {
+            this.scene.start("oceanFloor");
+        });
+
+        // Optional: projectile-player collision (player takes damage)
+        this.physics.add.overlap(my.sprite.player, this.shootProjectiles, (player, projectile) => {
+            projectile.destroy();
+            if (this.deathSound) this.deathSound.play({ volume: 0.7 });
+            if (this.playerHealth > 0) {
+                this.playerHealth--;
+                this.events.emit('updateHealth', this.playerHealth);
+                if (this.playerHealth <= 0) {
+                    this.events.emit('updateHealth', this.playerHealth);
+                    this.scene.restart();
+                    return;
+                }
+            }
+            player.setPosition(15, 276);
+            player.body.setVelocity(0, 0);
+        });
 
         // --- Player & Bug Enemy collision logic ---
         this.physics.add.overlap(my.sprite.player, this.bugEnemy, (player, enemy) => {
@@ -460,7 +507,6 @@ class Level2 extends Phaser.Scene {
 
             if (playerFalling && playerBottom <= enemyTop + 10) {
                 enemy.anims.stop();
-                enemy.setFrame('tile_0020.png');
                 enemy.body.enable = false;
                 if (this.bugDeathSound) this.bugDeathSound.play({ volume: 0.7 });
                 this.time.delayedCall(350, () => {
@@ -632,10 +678,48 @@ class Level2 extends Phaser.Scene {
         if (this.shootEnemy && this.shootEnemy.active) {
             this.shootEnemy.setVelocityX(0);
             this.shootEnemy.setVelocityY(0);
-            // Optionally, keep it at its spawn position in case of physics nudges
             this.shootEnemy.x = 1265;
             this.shootEnemy.y = 218;
+
+            // Fire projectile every 5 seconds
+            if (!this.shootEnemyLastFired || this.time.now - this.shootEnemyLastFired > this.shootEnemyFireInterval) {
+                const projectile = this.shootProjectiles.create(this.shootEnemy.x - 20, this.shootEnemy.y, "platformer_characters", "tile_0008.png");
+                projectile.setVelocityX(-200);
+                projectile.setGravityY(0);
+                projectile.setScale(.5);
+                projectile.setCollideWorldBounds(false);
+                projectile.body.allowGravity = false;
+                projectile.setDepth(5);
+                this.shootEnemyLastFired = this.time.now;
+            }
         }
+
+        // --- Second Shoot Enemy logic: stay fixed in position ---
+        if (this.shootEnemy2 && this.shootEnemy2.active) {
+            this.shootEnemy2.setVelocityX(0);
+            this.shootEnemy2.setVelocityY(0);
+            this.shootEnemy2.x = 1537;
+            this.shootEnemy2.y = 326;
+
+            // Fire projectile every 5 seconds
+            if (!this.shootEnemy2LastFired || this.time.now - this.shootEnemy2LastFired > this.shootEnemy2FireInterval) {
+                const projectile = this.shootProjectiles.create(this.shootEnemy2.x - 20, this.shootEnemy2.y, "platformer_characters", "tile_0008.png");
+                projectile.setVelocityX(-200);
+                projectile.setGravityY(0);
+                projectile.setScale(.5);
+                projectile.setCollideWorldBounds(false);
+                projectile.body.allowGravity = false;
+                projectile.setDepth(5);
+                this.shootEnemy2LastFired = this.time.now;
+            }
+        }
+
+        // Destroy projectiles that go out of bounds
+        this.shootProjectiles.children.each((proj) => {
+            if (proj.x < 0 || proj.x > this.physics.world.bounds.width || proj.y < 0 || proj.y > this.physics.world.bounds.height) {
+                proj.destroy();
+            }
+        });
 
         // Play walking sound effect if moving on ground
         if (
