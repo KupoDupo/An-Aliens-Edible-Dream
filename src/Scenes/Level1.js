@@ -44,13 +44,11 @@ class Level1 extends Phaser.Scene {
         // Explicitly clear collision on prettyLayer to avoid invisible walls
         this.prettyLayer.setCollision(false);
 
-        // Create coins from Objects layer in tilemap
-        this.coins = this.map.createFromObjects("Donuts-Candy", {
-            name: "coin",
+        const heartObjects = this.map.createFromObjects("Donuts-Candy", {
+            name: "heart",
             key: "tilemap_sheet",
-            frame: 151
-        });
-        this.coinGroup = this.add.group(this.coins);
+            frame: 44,
+        })
 
         // Collect donut object data and create Sprites:
         const donutObjects = this.map.createFromObjects("Donuts-Candy", {
@@ -120,6 +118,7 @@ class Level1 extends Phaser.Scene {
         this.physics.add.overlap(my.sprite.player, this.donutGroup, (obj1, obj2) => {
             obj2.destroy();
             my.vfx.donutCollect.emitParticle(1, obj2.x, obj2.y);
+            if (this.donutPickupSound) this.donutPickupSound.play({ volume: 1.0 }); // louder
             this.donutsCollected++;
             this.events.emit('updateDonuts', this.donutsCollected);
         });
@@ -165,6 +164,7 @@ class Level1 extends Phaser.Scene {
 
         // --- Spike collision: reset player to spawn point and lose health ---
         this.physics.add.overlap(my.sprite.player, this.spikeGroup, () => {
+            if (this.deathSound) this.deathSound.play({ volume: 0.7 });
             if (this.playerHealth > 0) {
                 this.playerHealth--;
                 this.events.emit('updateHealth', this.playerHealth); // Update UI on health change
@@ -236,11 +236,15 @@ class Level1 extends Phaser.Scene {
         this.bugEnemy.setCollideWorldBounds(true);
         this.bugEnemy.setVelocityX(60); // initial speed to the right
         this.bugEnemy.maxX = 450;
+        this.bugEnemy.minX = 333; // <-- add this line to avoid undefined
         this.bugEnemy.body.allowGravity = true;
         this.bugEnemy.setDepth(10);
         this.bugEnemy.setFlipX(true);
 
-        this.bugEnemy.anims.play('bug_walk');
+        // Only play bug_walk if the animation exists
+        if (this.anims.exists('bug_walk')) {
+            this.bugEnemy.anims.play('bug_walk');
+        }
 
         // Enemy collides with platforms
         this.physics.add.collider(this.bugEnemy, this.platformLayer);
@@ -278,12 +282,14 @@ class Level1 extends Phaser.Scene {
                 enemy.anims.stop();
                 enemy.setFrame('tile_0020.png');
                 enemy.body.enable = false;
+                if (this.bugDeathSound) this.bugDeathSound.play({ volume: 0.7 });
                 this.time.delayedCall(350, () => {
                     enemy.disableBody(true, true);
                 });
                 player.body.setVelocityY(this.JUMP_VELOCITY * 0.7); // Bounce player up a bit
             } else if (overlap) {
                 // Player takes damage and respawns (like spikes)
+                if (this.deathSound) this.deathSound.play({ volume: 0.7 });
                 if (this.playerHealth > 0) {
                     this.playerHealth--;
                     this.events.emit('updateHealth', this.playerHealth);
@@ -297,6 +303,23 @@ class Level1 extends Phaser.Scene {
                 player.body.setVelocity(0, 0);
             }
         });
+
+        // Walking sound effects
+        this.footstepSounds = [
+            this.sound.add("footstep1"),
+            this.sound.add("footstep2")
+        ];
+        this.lastFootstepTime = 0;
+        this.footstepInterval = 220; // ms between footsteps
+
+        // Bug death sound effect
+        this.bugDeathSound = this.sound.add("bugDeath");
+
+        // Death sound effect (was spikeHitSound)
+        this.deathSound = this.sound.add("spikeHit");
+
+        // Donut pickup sound effect
+        this.donutPickupSound = this.sound.add("donutPickup");
 
     }
 
@@ -383,6 +406,18 @@ class Level1 extends Phaser.Scene {
                 if (this.bugEnemy.anims.currentAnim && this.bugEnemy.anims.currentAnim.key !== 'bug_idle') {
                     this.bugEnemy.anims.play('bug_idle');
                 }
+            }
+        }
+
+        // Play walking sound effect if moving on ground
+        if (
+            (cursors.left.isDown || cursors.right.isDown) &&
+            my.sprite.player.body.blocked.down
+        ) {
+            const now = this.time.now;
+            if (now - this.lastFootstepTime > this.footstepInterval) {
+                Phaser.Utils.Array.GetRandom(this.footstepSounds).play({ volume: 0.5 });
+                this.lastFootstepTime = now;
             }
         }
     }

@@ -459,6 +459,42 @@
                  "width":18,
                  "x":1601.5,
                  "y":252.5
+                }, 
+                {
+                 "gid":157,
+                 "height":18,
+                 "id":64,
+                 "name":"heart",
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":18,
+                 "x":672.333333333333,
+                 "y":357
+                }, 
+                {
+                 "gid":157,
+                 "height":18,
+                 "id":65,
+                 "name":"heart",
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":18,
+                 "x":1295,
+                 "y":307.666666666667
+                }, 
+                {
+                 "gid":157,
+                 "height":18,
+                 "id":67,
+                 "name":"heart",
+                 "rotation":0,
+                 "type":"",
+                 "visible":true,
+                 "width":18,
+                 "x":252,
+                 "y":126.363636363636
                 }],
          "opacity":1,
          "type":"objectgroup",
@@ -503,7 +539,7 @@
          "y":0
         }],
  "nextlayerid":6,
- "nextobjectid":64,
+ "nextobjectid":69,
  "orientation":"orthogonal",
  "renderorder":"right-down",
  "tiledversion":"1.11.2",

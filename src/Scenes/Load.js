@@ -33,13 +33,21 @@ class Load extends Phaser.Scene {
             frameHeight: 18
         });
 
-        // Oooh, fancy. A multi atlas is a texture atlas which has the textures spread
-        // across multiple png files, so as to keep their size small for use with
-        // lower resource devices (like mobile phones).
-        // kenny-particles.json internally has a list of the png files
-        // The multiatlas was created using TexturePacker and the Kenny
-        // Particle Pack asset pack.
         this.load.multiatlas("kenny-particles", "kenny-particles.json");
+
+        // Load walking sound effects
+        this.load.setPath("./assets/Audio/");
+        this.load.audio("footstep1", "footstep_carpet_003.ogg");
+        this.load.audio("footstep2", "footstep_carpet_004.ogg");
+
+        // Load bug death sound effect
+        this.load.audio("bugDeath", "impactGeneric_light_000.ogg");
+
+        // Load spike hit sound effect
+        this.load.audio("spikeHit", "impactMining_000.ogg");
+
+        // Load donut pickup sound effect
+        this.load.audio("donutPickup", "impactTin_medium_000.ogg");
     }
 
     create() {
