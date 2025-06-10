@@ -121,8 +121,7 @@ class Level1 extends Phaser.Scene {
             obj2.destroy();
             my.vfx.donutCollect.emitParticle(1, obj2.x, obj2.y);
             this.donutsCollected++;
-            this.donutText.setText(`Donuts: ${this.donutsCollected}`); // Update label
-            console.log(`Donuts collected: ${this.donutsCollected}`);
+            this.events.emit('updateDonuts', this.donutsCollected);
         });
 
         // --- One-way platforms setup ---
@@ -168,8 +167,10 @@ class Level1 extends Phaser.Scene {
         this.physics.add.overlap(my.sprite.player, this.spikeGroup, () => {
             if (this.playerHealth > 0) {
                 this.playerHealth--;
-                this.updateHeartsUI();
+                this.events.emit('updateHealth', this.playerHealth);
                 if (this.playerHealth <= 0) {
+                    // Emit health update before restart, then restart scene
+                    this.events.emit('updateHealth', this.playerHealth);
                     this.scene.restart();
                     return;
                 }
@@ -221,70 +222,12 @@ class Level1 extends Phaser.Scene {
 
         // Donut counter setup
         this.donutsCollected = 0;
-
-        // Add donut icon (frame 14 from dessert_sheet)
-        // Initial position is 0,0 as it will be constantly updated
-        this.donutIcon = this.add.image(0, 0, "dessert_sheet", 14)
-            .setOrigin(1, 0) // Origin (1,0) for top-right of the element
-            .setScale(1.2)
-            .setScrollFactor(0) // Fixed to camera
-            .setDepth(1000); 
-
-        // Add donut count text next to icon
-        this.donutText = this.add.text(0, 0, `Donuts: ${this.donutsCollected}`,
-            { font: '28px Arial Black', fill: '#fff', stroke: '#000', strokeThickness: 4 })
-            .setOrigin(1, 0) // Origin (1,0) for top-right of the element
-            .setScrollFactor(0) // Fixed to camera
-            .setDepth(1000);
-
-        // Add background rectangle for donut score
-        this.donutScoreBg = this.add.rectangle(0, 0, 200, 50, 0x000000, 0.5) // Initial size is a guess
-            .setOrigin(1, 0) // Origin (1,0) for top-right of the element
-            .setScrollFactor(0) // Fixed to camera
-            .setDepth(999);
+        this.events.emit('updateDonuts', this.donutsCollected);
 
         // --- Health system setup ---
         this.playerMaxHealth = 3;
         this.playerHealth = this.playerMaxHealth;
-        this.heartIcons = [];
-        for (let i = 0; i < this.playerMaxHealth; i++) {
-            let heart = this.add.image(0, 0, "tilemap_sheet", 44) // Use frame 44 only
-            .setOrigin(0, 1) // Origin (0,1) for bottom-left of the element
-            .setScale(1.2)
-            .setScrollFactor(0) // Fixed to camera
-            .setDepth(1000);
-            this.heartIcons.push(heart);
-        }
-
-        // --- Debugging elements ---
-        // A simple rectangle at the very top-left of the camera's viewport
-        this.testRect = this.add.rectangle(0, 0, 50, 50, 0xff0000)
-            .setOrigin(0, 0) // Top-left origin
-            .setScrollFactor(0) // Fixed to camera
-            .setDepth(2000);
-
-        // A simple text message to confirm UI is appearing and fixed
-        this.debugTestText = this.add.text(0, 0, 'UI Debug', {
-            font: '24px Arial', fill: '#00FFFF'
-        })
-        .setOrigin(0, 0) // Top-left origin
-        .setScrollFactor(0) // Fixed to camera
-        .setDepth(9999);
-
-
-        // Initial update of heart UI (to set correct alphas)
-        this.updateHeartsUI();
-    }
-
-    updateHeartsUI() {
-        for (let i = 0; i < this.heartIcons.length; i++) {
-            if (i < this.playerHealth) {
-                this.heartIcons[i].setAlpha(1);
-            } else {
-            this.heartIcons[i].setFrame(46); // Empty/lost heart
-            this.heartIcons[i].setAlpha(1);  // Keep visible
-            }
-        }
+        this.events.emit('updateHealth', this.playerHealth);
     }
 
     update() {
@@ -326,63 +269,5 @@ class Level1 extends Phaser.Scene {
         if(Phaser.Input.Keyboard.JustDown(this.rKey)) {
             this.scene.restart();
         }
-
-        // --- UI Positioning (relative to camera's worldview) ---
-        // This calculates positions based on the camera's current visible area
-        // Elements with setScrollFactor(0) are positioned relative to the camera's
-        // top-left corner (cam.worldView.left, cam.worldView.top).
-        const cam = this.cameras.main;
-        const margin = 10; // Margin from the camera's edges
-
-        // Heart Icons UI (bottom-left)
-        // heartIcons have origin (0,1) = bottom-left corner.
-        // So, their X is their left edge, Y is their bottom edge.
-        const heartMargin = 20;
-        let lastHeartRight = cam.worldView.left + heartMargin;
-        for (let i = 0; i < this.heartIcons.length; i++) {
-            this.heartIcons[i].x = lastHeartRight;
-            this.heartIcons[i].y = cam.worldView.bottom - heartMargin;
-            lastHeartRight += this.heartIcons[i].displayWidth + 10;
-        }
-
-        // Donut Counter UI (bottom-left, after hearts)
-        // donutIcon, donutText, donutScoreBg have origin (0,1) = bottom-left corner.
-        // Their X is their left edge, Y is their bottom edge.
-        // Place donutIcon right after the last heart icon
-        const donutIconSpacing = 20;
-        this.donutIcon.setOrigin(0, 1);
-        this.donutIcon.x = lastHeartRight + donutIconSpacing;
-        this.donutIcon.y = cam.worldView.bottom - heartMargin;
-
-        const textIconSpacing = 5;
-        this.donutText.setOrigin(0, 1);
-        this.donutText.x = this.donutIcon.x + this.donutIcon.displayWidth + textIconSpacing;
-        this.donutText.y = this.donutIcon.y; // Align bottom
-
-        // Calculate background size and position based on content
-        // The background's content area (icon+text) starts at the leftmost point of the icon
-        // and ends at the rightmost point of the text.
-        const contentLeft = this.donutIcon.x;
-        const contentRight = this.donutText.x + this.donutText.displayWidth;
-        const contentTop = Math.min(this.donutIcon.y - this.donutIcon.displayHeight, this.donutText.y - this.donutText.displayHeight);
-        const contentBottom = this.donutIcon.y;
-
-        const bgPadding = 10; // Padding around the text and icon inside the background
-        this.donutScoreBg.displayWidth = (contentRight - contentLeft) + (bgPadding * 2);
-        this.donutScoreBg.displayHeight = (contentBottom - contentTop) + (bgPadding * 2);
-
-        // Position the background (origin 0,1 - bottom-left corner)
-        this.donutScoreBg.setOrigin(0, 1);
-        this.donutScoreBg.x = contentLeft - bgPadding;
-        this.donutScoreBg.y = contentBottom + bgPadding;
-
-        // Debugging elements (top-left)
-        // testRect and debugTestText have origin (0,0) = top-left corner.
-        this.testRect.x = cam.worldView.left + 10;
-        this.testRect.y = cam.worldView.top + 10;
-        
-        // Position debugText below testRect
-        this.debugTestText.x = cam.worldView.left + 10;
-        this.debugTestText.y = cam.worldView.top + 10 + this.testRect.displayHeight + 10; 
     }
 }
