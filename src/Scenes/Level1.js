@@ -1,35 +1,30 @@
 class Level1 extends Phaser.Scene {
     constructor() {
         super("Level1");
-        
     }
 
     init() {
         // variables and settings
         this.ACCELERATION = 250; // reduced for more controlled movement
-        this.DRAG = 1200;        // increased for less sliding
+        this.DRAG = 1200;       // increased for less sliding
         this.physics.world.gravity.y = 1200; // reduced gravity for slower fall
         this.JUMP_VELOCITY = -400; // less negative for slower, higher jump
         this.PARTICLE_VELOCITY = 50;
-        this.SCALE = 2.0;
+        this.SCALE = 2.0; // This is the camera zoom scale (e.g., 2.0 for 2x zoom)
     }
 
     create() {
-        // Create a new tilemap game object which uses 18x18 pixel tiles, and is
-        // 45 tiles wide and 25 tiles tall.
-        // this.map = this.add.tilemap("platformer-level-1", 18, 18, 45, 25);
+        // Create a new tilemap game object
         this.map = this.add.tilemap("platformer-final-lvl1");
 
-        // Add a tileset to the map
-        // First parameter: name we gave the tileset in Tiled
-        // Second parameter: key for the tilesheet (from this.load.image in Load.js)
+        // Add tilesets to the map
         this.tileset = [
             this.map.addTilesetImage("tilemap_packed_dessert", "dessert_tiles"),
             this.map.addTilesetImage("tilemap_packed", "tilemap_tiles"),
             this.map.addTilesetImage("crop_backgrounds_packed", "background_tiles")
         ];
 
-        // Create a layer
+        // Create layers
         this.bgLayer = this.map.createLayer("Backgrounds", this.tileset, 0, 0);
         this.platformLayer = this.map.createLayer("Platforms", this.tileset, 0, 0);
         this.prettyLayer = this.map.createLayer("Pretty-Stuffs", this.tileset, 0, 0);
@@ -42,19 +37,10 @@ class Level1 extends Phaser.Scene {
             this.map.heightInPixels
         );
 
-        // Make it collidable
-        // Remove collision from bgLayer to avoid invisible walls
-        // this.bgLayer.setCollisionByProperty({
-        //     collides: true
-        // });
-
+        // Make platforms collidable
         this.platformLayer.setCollisionByProperty({
             collides: true
         });
-
-/*         this.prettyLayer.setCollisionByProperty({
-            collides: true
-        }); */
         // Explicitly clear collision on prettyLayer to avoid invisible walls
         this.prettyLayer.setCollision(false);
 
@@ -64,19 +50,30 @@ class Level1 extends Phaser.Scene {
             key: "tilemap_sheet",
             frame: 151
         });
+        this.coinGroup = this.add.group(this.coins);
 
-        this.donuts = this.map.createFromObjects("Donuts-Candy", {
+        // Collect donut object data and create Sprites:
+        const donutObjects = this.map.createFromObjects("Donuts-Candy", {
             name: "donut",
             key: "dessert_sheet",
-            frame: 14
         });
 
-        this.physics.world.enable(this.coins, Phaser.Physics.Arcade.STATIC_BODY);
-        this.physics.world.enable(this.donuts, Phaser.Physics.Arcade.STATIC_BODY);
+        // Define donut animation
+        this.anims.create({
+            key: 'donut_spin',
+            frames: this.anims.generateFrameNumbers('dessert_sheet', { start: 13, end: 14 }),
+            frameRate: 2,
+            repeat: -1
+        });
 
-        // Create a Phaser group out of the array this.coins
-        // This will be used for collision detection below.
-        this.coinGroup = this.add.group(this.coins);
+        // Replace donuts with Sprites that can animate
+        this.donuts = donutObjects.map(obj => {
+            const donut = this.add.sprite(obj.x, obj.y, "dessert_sheet", 14);
+            donut.anims.play('donut_spin');
+            obj.destroy(); // Remove the original static image from the map
+            return donut;
+        });
+        this.physics.world.enable(this.donuts, Phaser.Physics.Arcade.STATIC_BODY);
         this.donutGroup = this.add.group(this.donuts);
 
         // --- Spikes setup ---
@@ -84,104 +81,48 @@ class Level1 extends Phaser.Scene {
             name: "spike"
         });
         this.physics.world.enable(this.spikes, Phaser.Physics.Arcade.STATIC_BODY);
-        // Make all spike objects invisible (see-thru collision box)
-        this.spikes.forEach(obj => obj.visible = false);
+        this.spikes.forEach(obj => obj.visible = false); // Make spike objects invisible
         this.spikeGroup = this.add.group(this.spikes);
-
-        // Find water tiles
-        /* this.waterTiles = this.groundLayer.filterTiles(tile => {
-            return tile.properties.water == true;
-        });*/
-
-        ////////////////////
-        // Water bubble particle effect here
-        // It's OK to have it start running (what I did)
-        ////////////////////
-        // flame_01.png (1-4) would be good for water bubbling
-        // use let water of this.waterTiles not let water in this.waterTiles since former gets you the actual water tile while the latter gets you the index in the array 
-        // have to say water.pixelX and water.pixelY to get the pixel coordinates of the tile
-        // water.x and water.y are the tilemap coordinates (in tiles) of the tile - won't reflect actual position in game
-        /*my.vfx.waterBubbling = [];
-        for (let water of this.waterTiles) {
-            let centerX = water.pixelX + this.map.tileWidth / 2;
-            let centerY = water.pixelY + this.map.tileHeight / 2;
-            let emitter = this.add.particles(centerX, centerY, "kenny-particles", {
-                    frame: ['circle_01.png', 'circle_02.png', 'circle_03.png'],
-                    random: true, // tells Phaser to randomly pick a frame from the frame array for each particle emitted - helps it look more natural
-                    scale: {start: 0.03, end: 0.07},
-                    lifespan: 800,
-                    alpha: {start: 1, end: 0.1},
-                    emitting: false, // don't emit continuously - why it looked so bad at first
-                    speedY: { min: -40, max: -80 }, // speed of particles in y direction - negative because we want them to go up
-                    gravityY: 0, // no gravity on particles - phaser's world gravity set in this file pulls all physics objects down but we don't want that to happen here 
-                });
-                my.vfx.waterBubbling.push(emitter);
-        }
-
-        this.time.addEvent({
-            delay: 50, // how often to bubble up (ms)
-            loop:true,
-            callback: () => {
-                if (my.vfx.waterBubbling.length > 0) {
-                    let emitter = Phaser.Utils.Array.GetRandom(my.vfx.waterBubbling);
-                    emitter.explode(Phaser.Math.Between(1, 3));
-                }
-            }
-        })*/
-
 
         // set up player avatar
         my.sprite.player = this.physics.add.sprite(29, 350, "platformer_characters", "tile_0004.png");
         my.sprite.player.setCollideWorldBounds(true); // Enable world bounds collision
         my.sprite.player.setDepth(10);
 
-        // Enable collision handling
-        // Only collide with the platformLayer
+        // Enable collision handling between player and platforms
         this.physics.add.collider(my.sprite.player, this.platformLayer);
 
-
-        // Coin collect particle effect here
-        // Important: make sure it's not running
-        // "light_03.png" (1-3) would be good for coin collect
-        // parameters: 0, 0 are the initial x and y position of the particle emitter (don't matter cause we pause it immediately and adjust these to other places when we call again)
-        // "kenny-particles" is the key of the particle texture atlas (or can be the image to use for the particles) - must be preloaded 
-        // the {} is the configuration object for the emitter (if empty it uses all default settings - isn't empty here cause we create our own settings for the vfx)
-        my.vfx.coinCollect = this.add.particles(0,0, "kenny-particles", {
+        // Coin collect particle effect
+        my.vfx.coinCollect = this.add.particles(0, 0, "kenny-particles", {
             frame: ['light_01.png', 'light_02.png', 'light_03.png'],
-            scale: {start: 0.03, end: 0.1},
+            scale: { start: 0.03, end: 0.1 },
             lifespan: 500,
-            alpha: {start: 1, end: 0.1},
+            alpha: { start: 1, end: 0.1 },
         });
-        // Stop it immediately - don't want it running 24/7 just during collision which is handled in arrow function below
         my.vfx.coinCollect.stop();
-
 
         // Coin collision handler
         this.physics.add.overlap(my.sprite.player, this.coinGroup, (obj1, obj2) => {
             obj2.destroy(); // remove coin on overlap
-            // Start the coin collect particle effect here
-            // This line emits (creates) one particle from the coinCollect particle emitter 
-            // at the position (x,y) of obj2 (the collected coin)
             my.vfx.coinCollect.emitParticle(1, obj2.x, obj2.y);
         });
 
-        my.vfx.donutCollect = this.add.particles(0,0, "kenny-particles", {
+        // Donut collect particle effect
+        my.vfx.donutCollect = this.add.particles(0, 0, "kenny-particles", {
             frame: ['light_01.png', 'light_02.png', 'light_03.png'],
-            scale: {start: 0.03, end: 0.1},
+            scale: { start: 0.03, end: 0.1 },
             lifespan: 500,
-            alpha: {start: 1, end: 0.1},
+            alpha: { start: 1, end: 0.1 },
         });
-        // Stop it immediately - don't want it running 24/7 just during collision which is handled in arrow function below
         my.vfx.donutCollect.stop();
 
-
-        // Coin collision handler
+        // Donut collision handler
         this.physics.add.overlap(my.sprite.player, this.donutGroup, (obj1, obj2) => {
-            obj2.destroy(); // remove coin on overlap
-            // Start the coin collect particle effect here
-            // This line emits (creates) one particle from the coinCollect particle emitter 
-            // at the position (x,y) of obj2 (the collected coin)
+            obj2.destroy();
             my.vfx.donutCollect.emitParticle(1, obj2.x, obj2.y);
+            this.donutsCollected++;
+            this.donutText.setText(`Donuts: ${this.donutsCollected}`); // Update label
+            console.log(`Donuts collected: ${this.donutsCollected}`);
         });
 
         // --- One-way platforms setup ---
@@ -205,14 +146,12 @@ class Level1 extends Phaser.Scene {
         this.events.on('update', () => {
             for (let platform of this.onewayPlatforms) {
                 let player = my.sprite.player;
-                // Check if player is falling and feet are above the platform
                 if (
                     player.body.velocity.y > 0 &&
                     player.body.bottom <= platform.body.top + 5 &&
                     player.body.right > platform.body.left &&
                     player.body.left < platform.body.right
                 ) {
-                    // If player is overlapping the platform horizontally and falling onto it
                     if (
                         player.body.bottom + player.body.velocity.y * this.game.loop.delta / 1000 >= platform.body.top
                     ) {
@@ -225,34 +164,36 @@ class Level1 extends Phaser.Scene {
             }
         });
 
-
-        // --- Spike collision: reset player to spawn point ---
+        // --- Spike collision: reset player to spawn point and lose health ---
         this.physics.add.overlap(my.sprite.player, this.spikeGroup, () => {
-            // Reset player to spawn point (change as needed)
-            my.sprite.player.setPosition(29, 350);
+            if (this.playerHealth > 0) {
+                this.playerHealth--;
+                this.updateHeartsUI();
+                if (this.playerHealth <= 0) {
+                    this.scene.restart();
+                    return;
+                }
+            }
+            my.sprite.player.setPosition(29, 350); // Reset player to spawn point
             my.sprite.player.body.setVelocity(0, 0);
         });
-
 
         // --- Exit setup ---
         this.exits = this.map.createFromObjects("Donuts-Candy", {
             name: "exit",
             key: "tilemap_sheet",
-            frame: 88,           
+            frame: 88,          
         });
         this.physics.world.enable(this.exits, Phaser.Physics.Arcade.STATIC_BODY);
         this.exitGroup = this.add.group(this.exits);
-
 
         // --- Exit overlap: transfer to Level2 ---
         this.physics.add.overlap(my.sprite.player, this.exitGroup, () => {
             this.scene.start("Level2");
         });
 
-
         // set up Phaser-provided cursor key input
         cursors = this.input.keyboard.createCursorKeys();
-
         this.rKey = this.input.keyboard.addKey('R');
 
         // debug key listener (assigned to D key)
@@ -263,73 +204,117 @@ class Level1 extends Phaser.Scene {
             }
         }, this);
 
-        // Movement vfx here
+        // Movement vfx
         my.vfx.walking = this.add.particles(0, 0, "kenny-particles", {
             frame: ['smoke_03.png', 'smoke_09.png'],
-            // TODO: Try: add random: true
-            scale: {start: 0.03, end: 0.1},
-            // TODO: Try: maxAliveParticles: 8,
+            scale: { start: 0.03, end: 0.1 },
             lifespan: 350,
-            // TODO: Try: gravityY: -400,
-            alpha: {start: 1, end: 0.1}, 
+            alpha: { start: 1, end: 0.1 }, 
         });
-
         my.vfx.walking.stop();
         
-
         // Simple camera to follow player
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
-        this.cameras.main.startFollow(my.sprite.player, true, 0.25, 0.25); // (target, [,roundPixels][,lerpX][,lerpY])
+        this.cameras.main.startFollow(my.sprite.player, true, 0.25, 0.25);
         this.cameras.main.setDeadzone(50, 50);
-        this.cameras.main.setZoom(this.SCALE);
-        
+        this.cameras.main.setZoom(this.SCALE); // Camera zoom is 2.0
 
+        // Donut counter setup
+        this.donutsCollected = 0;
+
+        // Add donut icon (frame 14 from dessert_sheet)
+        // Initial position is 0,0 as it will be constantly updated
+        this.donutIcon = this.add.image(0, 0, "dessert_sheet", 14)
+            .setOrigin(1, 0) // Origin (1,0) for top-right of the element
+            .setScale(1.2)
+            .setScrollFactor(0) // Fixed to camera
+            .setDepth(1000); 
+
+        // Add donut count text next to icon
+        this.donutText = this.add.text(0, 0, `Donuts: ${this.donutsCollected}`,
+            { font: '28px Arial Black', fill: '#fff', stroke: '#000', strokeThickness: 4 })
+            .setOrigin(1, 0) // Origin (1,0) for top-right of the element
+            .setScrollFactor(0) // Fixed to camera
+            .setDepth(1000);
+
+        // Add background rectangle for donut score
+        this.donutScoreBg = this.add.rectangle(0, 0, 200, 50, 0x000000, 0.5) // Initial size is a guess
+            .setOrigin(1, 0) // Origin (1,0) for top-right of the element
+            .setScrollFactor(0) // Fixed to camera
+            .setDepth(999);
+
+        // --- Health system setup ---
+        this.playerMaxHealth = 3;
+        this.playerHealth = this.playerMaxHealth;
+        this.heartIcons = [];
+        for (let i = 0; i < this.playerMaxHealth; i++) {
+            let heart = this.add.image(0, 0, "tilemap_sheet", 44) // Use frame 44 only
+            .setOrigin(0, 1) // Origin (0,1) for bottom-left of the element
+            .setScale(1.2)
+            .setScrollFactor(0) // Fixed to camera
+            .setDepth(1000);
+            this.heartIcons.push(heart);
+        }
+
+        // --- Debugging elements ---
+        // A simple rectangle at the very top-left of the camera's viewport
+        this.testRect = this.add.rectangle(0, 0, 50, 50, 0xff0000)
+            .setOrigin(0, 0) // Top-left origin
+            .setScrollFactor(0) // Fixed to camera
+            .setDepth(2000);
+
+        // A simple text message to confirm UI is appearing and fixed
+        this.debugTestText = this.add.text(0, 0, 'UI Debug', {
+            font: '24px Arial', fill: '#00FFFF'
+        })
+        .setOrigin(0, 0) // Top-left origin
+        .setScrollFactor(0) // Fixed to camera
+        .setDepth(9999);
+
+
+        // Initial update of heart UI (to set correct alphas)
+        this.updateHeartsUI();
+    }
+
+    updateHeartsUI() {
+        for (let i = 0; i < this.heartIcons.length; i++) {
+            if (i < this.playerHealth) {
+                this.heartIcons[i].setAlpha(1);
+            } else {
+            this.heartIcons[i].setFrame(46); // Empty/lost heart
+            this.heartIcons[i].setAlpha(1);  // Keep visible
+            }
+        }
     }
 
     update() {
+        // Player movement and animation logic
         if(cursors.left.isDown) {
             my.sprite.player.setAccelerationX(-this.ACCELERATION);
             my.sprite.player.resetFlip();
             my.sprite.player.anims.play('walk', true);
-            // Particle following code here
-            //This controls the emitter to follow the player avatar - set emitter location to right hand side of avatar (moving left, emit right)
-            // set the offset location to be just above ground level (my.sprite.player.displayHeight/2-5) and just by avatar's feet (my.sprite.player.displayWidth/2-10)
             my.vfx.walking.startFollow(my.sprite.player, my.sprite.player.displayWidth/2-10, my.sprite.player.displayHeight/2-5, false);
-            // speed of particles is positive because we want them to move right (positive x direction)
             my.vfx.walking.setParticleSpeed(this.PARTICLE_VELOCITY, 0);
-            // Only play smoke effect if touching the ground - don't want player emitting smoke changing direction in air
-            // he does emit this smoke when he jumps though which makes it look like he's farting and it propels him lmao 
             if (my.sprite.player.body.blocked.down) {
-
                 my.vfx.walking.start();
-
             }
-
         } else if(cursors.right.isDown) {
             my.sprite.player.setAccelerationX(this.ACCELERATION);
             my.sprite.player.setFlip(true, false);
             my.sprite.player.anims.play('walk', true);
-            // Particle following code here
             my.vfx.walking.startFollow(my.sprite.player, -my.sprite.player.displayWidth/2-10, my.sprite.player.displayHeight/2-5, false);
-            // speed of particles is negative because we want them to move left (negative x direction)
             my.vfx.walking.setParticleSpeed(-this.PARTICLE_VELOCITY, 0);
             if (my.sprite.player.body.blocked.down) {
-
                 my.vfx.walking.start();
-
             }
-
         } else {
-            // Set acceleration to 0 and have DRAG take over
             my.sprite.player.setAccelerationX(0);
             my.sprite.player.setDragX(this.DRAG);
             my.sprite.player.anims.play('idle');
-            // Have the vfx stop playing
             my.vfx.walking.stop();
         }
 
-        // player jump
-        // note that we need body.blocked rather than body.touching b/c the former applies to tilemap tiles and the latter to the "ground"
+        // Player jump logic
         if(!my.sprite.player.body.blocked.down) {
             my.sprite.player.anims.play('jump');
         }
@@ -337,8 +322,67 @@ class Level1 extends Phaser.Scene {
             my.sprite.player.body.setVelocityY(this.JUMP_VELOCITY);
         }
 
+        // Restart scene on R key
         if(Phaser.Input.Keyboard.JustDown(this.rKey)) {
             this.scene.restart();
         }
+
+        // --- UI Positioning (relative to camera's worldview) ---
+        // This calculates positions based on the camera's current visible area
+        // Elements with setScrollFactor(0) are positioned relative to the camera's
+        // top-left corner (cam.worldView.left, cam.worldView.top).
+        const cam = this.cameras.main;
+        const margin = 10; // Margin from the camera's edges
+
+        // Heart Icons UI (bottom-left)
+        // heartIcons have origin (0,1) = bottom-left corner.
+        // So, their X is their left edge, Y is their bottom edge.
+        const heartMargin = 20;
+        let lastHeartRight = cam.worldView.left + heartMargin;
+        for (let i = 0; i < this.heartIcons.length; i++) {
+            this.heartIcons[i].x = lastHeartRight;
+            this.heartIcons[i].y = cam.worldView.bottom - heartMargin;
+            lastHeartRight += this.heartIcons[i].displayWidth + 10;
+        }
+
+        // Donut Counter UI (bottom-left, after hearts)
+        // donutIcon, donutText, donutScoreBg have origin (0,1) = bottom-left corner.
+        // Their X is their left edge, Y is their bottom edge.
+        // Place donutIcon right after the last heart icon
+        const donutIconSpacing = 20;
+        this.donutIcon.setOrigin(0, 1);
+        this.donutIcon.x = lastHeartRight + donutIconSpacing;
+        this.donutIcon.y = cam.worldView.bottom - heartMargin;
+
+        const textIconSpacing = 5;
+        this.donutText.setOrigin(0, 1);
+        this.donutText.x = this.donutIcon.x + this.donutIcon.displayWidth + textIconSpacing;
+        this.donutText.y = this.donutIcon.y; // Align bottom
+
+        // Calculate background size and position based on content
+        // The background's content area (icon+text) starts at the leftmost point of the icon
+        // and ends at the rightmost point of the text.
+        const contentLeft = this.donutIcon.x;
+        const contentRight = this.donutText.x + this.donutText.displayWidth;
+        const contentTop = Math.min(this.donutIcon.y - this.donutIcon.displayHeight, this.donutText.y - this.donutText.displayHeight);
+        const contentBottom = this.donutIcon.y;
+
+        const bgPadding = 10; // Padding around the text and icon inside the background
+        this.donutScoreBg.displayWidth = (contentRight - contentLeft) + (bgPadding * 2);
+        this.donutScoreBg.displayHeight = (contentBottom - contentTop) + (bgPadding * 2);
+
+        // Position the background (origin 0,1 - bottom-left corner)
+        this.donutScoreBg.setOrigin(0, 1);
+        this.donutScoreBg.x = contentLeft - bgPadding;
+        this.donutScoreBg.y = contentBottom + bgPadding;
+
+        // Debugging elements (top-left)
+        // testRect and debugTestText have origin (0,0) = top-left corner.
+        this.testRect.x = cam.worldView.left + 10;
+        this.testRect.y = cam.worldView.top + 10;
+        
+        // Position debugText below testRect
+        this.debugTestText.x = cam.worldView.left + 10;
+        this.debugTestText.y = cam.worldView.top + 10 + this.testRect.displayHeight + 10; 
     }
 }
