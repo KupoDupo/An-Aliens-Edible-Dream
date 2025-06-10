@@ -92,7 +92,7 @@ class Load extends Phaser.Scene {
                 { key: 'platformer_characters', frame: 'tile_0018.png' },
                 { key: 'platformer_characters', frame: 'tile_0019.png' }
             ],
-            frameRate: 6,
+            frameRate: 10,
             repeat: -1
         });
         this.anims.create({
@@ -104,8 +104,18 @@ class Load extends Phaser.Scene {
             repeat: -1
         });
 
+        this.anims.create({
+            key: 'shoot_idle',
+            frames: [
+                { key: 'platformer_characters', frame: 'tile_0004.png' },
+                { key: 'platformer_characters', frame: 'tile_0005.png' }
+            ],
+            frameRate: 6,
+            repeat: -1
+        })
+
          // ...and pass to the next Scene
-         this.scene.start("Level1");
+         this.scene.start("Level2");
     }
 
     // Never get here since a new scene is started in create()
