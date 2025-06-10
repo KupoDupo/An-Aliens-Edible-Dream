@@ -315,11 +315,10 @@ class Level2 extends Phaser.Scene {
         this.physics.add.collider(this.bugEnemy2, this.platformLayer);
 
         // --- Shoot Enemy setup: idle at (1290, 225) ---
-        this.shootEnemy = this.physics.add.sprite(12, 225, "platformer_characters", "tile_0005.png");
+        this.shootEnemy = this.physics.add.sprite(1265, 218, "platformer_characters", "tile_0005.png");
         this.shootEnemy.setCollideWorldBounds(true);
         this.shootEnemy.body.allowGravity = true;
         this.shootEnemy.setDepth(10);
-        this.shootEnemy.setFlipX(true);
         if (this.anims.exists('shoot_idle')) {
             this.shootEnemy.anims.play('shoot_idle');
         }
@@ -634,8 +633,8 @@ class Level2 extends Phaser.Scene {
             this.shootEnemy.setVelocityX(0);
             this.shootEnemy.setVelocityY(0);
             // Optionally, keep it at its spawn position in case of physics nudges
-            this.shootEnemy.x = 1290;
-            this.shootEnemy.y = 225;
+            this.shootEnemy.x = 1265;
+            this.shootEnemy.y = 218;
         }
 
         // Play walking sound effect if moving on ground
