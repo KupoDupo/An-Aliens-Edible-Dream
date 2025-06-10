@@ -137,20 +137,22 @@ class UIScene extends Phaser.Scene
     }
 
     update() {
-        // Hook up events to Level1 only once, after Level1 is running
+        // Hook up events to Level1 and Level2 only once, after either is running
         if (!this._eventsHooked) {
             const level1 = this.scene.get('Level1');
-            if (level1) {
-                level1.events.on('updateDonuts', (count) => {
+            const level2 = this.scene.get('Level2');
+            const hookEvents = (level) => {
+                if (!level) return;
+                level.events.on('updateDonuts', (count) => {
                     this.donutsCollected = count;
                     this.donutText.setText(`x${this.donutsCollected}`);
                     this.updateDonutUI();
                 });
-                level1.events.on('updateHealth', (health) => {
+                level.events.on('updateHealth', (health) => {
                     this.playerHealth = health;
                     this.updateHeartsUI();
                 });
-                level1.events.on('setMaxHealth', (max) => {
+                level.events.on('setMaxHealth', (max) => {
                     this.playerMaxHealth = max;
                     // Add new heart icons if needed
                     while (this.heartIcons.length < this.playerMaxHealth) {
@@ -168,8 +170,10 @@ class UIScene extends Phaser.Scene
                     }
                     this.updateHeartsUI();
                 });
-                this._eventsHooked = true;
-            }
+            };
+            if (level1) hookEvents(level1);
+            if (level2) hookEvents(level2);
+            if (level1 || level2) this._eventsHooked = true;
         }
         // Keep UI in correct position if camera moves
         this.updateDonutUI();

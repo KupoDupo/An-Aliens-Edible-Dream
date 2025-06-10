@@ -226,17 +226,16 @@ class Level2 extends Phaser.Scene {
         this.exits = this.map.createFromObjects("Donuts-Candy", {
             name: "exit",
             key: "shipGreen"
-            // frame property removed since shipGreen is a single image
         });
         this.physics.world.enable(this.exits, Phaser.Physics.Arcade.STATIC_BODY);
         this.exitGroup = this.add.group(this.exits);
 
         // Make exit images smaller
         this.exits.forEach(exit => {
-            exit.setScale(0.5); // or adjust to your preferred size
+            exit.setScale(0.2);
             if (exit.body) {
-                exit.body.width *= 0.5;
-                exit.body.height *= 0.5;
+                exit.body.width *= 0.3 / (exit.body.width / exit.displayWidth);
+                exit.body.height *= 0.3 / (exit.body.height / exit.displayHeight);
                 exit.body.updateFromGameObject();
             }
         });
