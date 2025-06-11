@@ -350,7 +350,10 @@ class Level2 extends Phaser.Scene {
         this.pipeGroup = this.add.group(this.pipes);
 
         // --- Pipe overlap: transfer to oceanFloor.js ---
-        this.physics.add.overlap(my.sprite.player, this.pipeGroup, () => {
+        this.physics.add.overlap(my.sprite.player, this.pipeGroup, (player, pipe) => {
+            // Prevent multiple triggers by disabling the pipe and player input
+            this.physics.world.disable(pipe);
+            this.input.keyboard.enabled = false;
             this.scene.start("oceanFloor");
         });
 

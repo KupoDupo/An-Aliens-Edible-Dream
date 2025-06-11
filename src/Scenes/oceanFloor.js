@@ -5,31 +5,39 @@ class oceanFloor extends Phaser.Scene {
 
     init() {
         // variables and settings
-        this.ACCELERATION = 120; // reduced for floatier feel
-        this.DRAG = 500;       // reduced for floatier feel (underwater)
-        this.physics.world.gravity.y = 300; // reduced gravity for underwater feel
-        this.JUMP_VELOCITY = -400; // less negative for slower, higher jump
-        this.PARTICLE_VELOCITY = 50;
+        this.ACCELERATION = 120; // lower for floatier underwater movement
+        this.DRAG = 600;         // lower drag for more glide
+        this.physics.world.gravity.y = 400; // lower gravity for floaty jumps
+        this.JUMP_VELOCITY = -250; // less negative for slower, higher jump
+        this.PARTICLE_VELOCITY = 30;
         this.SCALE = 2.0; // This is the camera zoom scale (e.g., 2.0 for 2x zoom)
     }
 
     create() {
-        // Create a new tilemap game object
-        this.map = this.add.tilemap("ocean-map");
+        // --- Fix: Use correct tilemap key ---
+        this.map = this.add.tilemap("oceanMap");
 
-        // Add tilesets to the map
+        // --- Fix: Use correct tileset image key ---
         this.tileset = [
-            this.map.addTilesetImage("dessert", "dessert_tiles"),
+            this.map.addTilesetImage("dessert", "dessert_tiles"), // If your Tiled map uses "dessert", keep this
             this.map.addTilesetImage("tilemap_packed", "tilemap_tiles"), 
         ];
 
-        // Create layers
-        this.bgLayer = this.map.createLayer("Water", this.tileset, 0, 0);
-        this.platformLayer = this.map.createLayer("Grounds", this.tileset, 0, 0);
-        this.pipeLayer = this.map.createLayer("Pipes", this.tileset, 0, 0);
-        // Set this layer's depth to be above player so blue tint overlays it (for underwater effect)
-        this.tintLayer = this.map.createLayer("BlueTint", this.tileset, 0, 0);
-        this.tintLayer.setDepth(12);
+        // --- Fix: Only create layers if they exist in the map ---
+        const layerNames = this.map.layers.map(l => l.name);
+        if (layerNames.includes("Water")) {
+            this.bgLayer = this.map.createLayer("Water", this.tileset, 0, 0);
+        }
+        if (layerNames.includes("Grounds")) {
+            this.platformLayer = this.map.createLayer("Grounds", this.tileset, 0, 0);
+        }
+        if (layerNames.includes("Pipes")) {
+            this.pipeLayer = this.map.createLayer("Pipes", this.tileset, 0, 0);
+        }
+        if (layerNames.includes("BlueTint")) {
+            this.tintLayer = this.map.createLayer("BlueTint", this.tileset, 0, 0);
+            this.tintLayer.setDepth(12);
+        }
 
         // Set world bounds to match the map size
         this.physics.world.setBounds(
@@ -58,13 +66,15 @@ class oceanFloor extends Phaser.Scene {
             key: "dessert_sheet",
         });
 
-        // Define donut animation
-        this.anims.create({
-            key: 'donut_spin',
-            frames: this.anims.generateFrameNumbers('dessert_sheet', { start: 13, end: 14 }),
-            frameRate: 2,
-            repeat: -1
-        });
+        // --- Fix: Only create donut_spin animation if it doesn't exist ---
+        if (!this.anims.exists('donut_spin')) {
+            this.anims.create({
+                key: 'donut_spin',
+                frames: this.anims.generateFrameNumbers('dessert_sheet', { start: 13, end: 14 }),
+                frameRate: 2,
+                repeat: -1
+            });
+        }
 
         // Replace donuts with Sprites that can animate
         this.donuts = donutObjects.map(obj => {
@@ -78,10 +88,12 @@ class oceanFloor extends Phaser.Scene {
 
         // --- Spikes setup ---
         this.spikes = this.map.createFromObjects("Objects", {
-            name: "spike"
+            name: "spike",
+            key: "dessert_sheet",
+            frame: 105,
         });
         this.physics.world.enable(this.spikes, Phaser.Physics.Arcade.STATIC_BODY);
-        this.spikes.forEach(obj => obj.visible = false); // Make spike objects invisible
+        this.spikes.forEach(obj => obj.visible = true);
         this.spikeGroup = this.add.group(this.spikes);
 
         // set up player avatar
@@ -105,6 +117,13 @@ class oceanFloor extends Phaser.Scene {
         this.physics.add.overlap(my.sprite.player, this.coinGroup, (obj1, obj2) => {
             obj2.destroy(); // remove coin on overlap
             my.vfx.coinCollect.emitParticle(1, obj2.x, obj2.y);
+            // --- Update donut counter UI if needed ---
+            if (this.scene.isActive('UIScene')) {
+                const uiScene = this.scene.get('UIScene');
+                if (uiScene && typeof uiScene.updateDonutUI === 'function') {
+                    uiScene.updateDonutUI();
+                }
+            }
         });
 
         // Donut collect particle effect
@@ -123,6 +142,13 @@ class oceanFloor extends Phaser.Scene {
             if (this.donutPickupSound) this.donutPickupSound.play({ volume: 1.0 }); // louder
             this.donutsCollected++;
             this.events.emit('updateDonuts', this.donutsCollected);
+            // --- Update donut counter UI ---
+            if (this.scene.isActive('UIScene')) {
+                const uiScene = this.scene.get('UIScene');
+                if (uiScene && typeof uiScene.updateDonutUI === 'function') {
+                    uiScene.updateDonutUI();
+                }
+            }
         });
 
         // Create heart sprites from map objects
@@ -155,17 +181,22 @@ class oceanFloor extends Phaser.Scene {
 
         // Heart collision handler
         this.physics.add.overlap(my.sprite.player, this.heartGroup, (obj1, obj2) => {
-            // Only allow collection if playerHealth < 3
-            if (this.playerHealth < 3) {
+            // Only allow collection if playerHealth < this.playerMaxHealth
+            if (this.playerHealth < this.playerMaxHealth) {
                 obj2.destroy();
                 my.vfx.heartCollect.emitParticle(1, obj2.x, obj2.y);
                 if (this.heartPickupSound) this.heartPickupSound.play({ volume: 1.0 });
-
-                // Increase health by 1, up to a max of 3
-                this.playerHealth = Math.min(this.playerHealth + 1, 3);
+                this.playerHealth = Math.min(this.playerHealth + 1, this.playerMaxHealth);
                 this.events.emit('updateHealth', this.playerHealth);
+                // --- Update health UI ---
+                if (this.scene.isActive('UIScene')) {
+                    const uiScene = this.scene.get('UIScene');
+                    if (uiScene && typeof uiScene.updateHeartsUI === 'function') {
+                        uiScene.updateHeartsUI();
+                    }
+                }
             }
-            // If at max health (3), do nothing (heart remains)
+            // If at max health, do nothing (heart remains)
         });
 
         // --- Spike collision: reset player to spawn point and lose health ---
@@ -174,6 +205,13 @@ class oceanFloor extends Phaser.Scene {
             if (this.playerHealth > 0) {
                 this.playerHealth--;
                 this.events.emit('updateHealth', this.playerHealth); // Update UI on health change
+                // --- Update health UI ---
+                if (this.scene.isActive('UIScene')) {
+                    const uiScene = this.scene.get('UIScene');
+                    if (uiScene && typeof uiScene.updateHeartsUI === 'function') {
+                        uiScene.updateHeartsUI();
+                    }
+                }
                 if (this.playerHealth <= 0) {
                     // Emit health update before restart, then restart scene
                     this.events.emit('updateHealth', this.playerHealth);
@@ -189,16 +227,17 @@ class oceanFloor extends Phaser.Scene {
         this.pipeLeft = this.map.createFromObjects("Objects", {
             name: "pipe1",
             key: "tilemap_sheet",
-            frame: 136,          
+            frame: 134,          
         });
         this.pipeRight = this.map.createFromObjects("Objects", {
             name: "pipe2",
             key: "tilemap_sheet",
             frame: 134,          
         });
-        this.physics.world.enable(this.exits, Phaser.Physics.Arcade.STATIC_BODY);
-        this.exitGroup = this.add.group(this.pipeLeft);
-        this.exitGroup = this.add.group(this.pipeRight);
+        // Combine both pipes into one group
+        const allPipes = [...this.pipeLeft, ...this.pipeRight];
+        this.physics.world.enable(allPipes, Phaser.Physics.Arcade.STATIC_BODY);
+        this.exitGroup = this.add.group(allPipes);
 
         // --- Exit overlap: transfer to Level2 ---
         this.physics.add.overlap(my.sprite.player, this.exitGroup, () => {
@@ -218,13 +257,14 @@ class oceanFloor extends Phaser.Scene {
         }, this);
 
         // Movement vfx
-        my.vfx.walking = this.add.particles(0, 0, "kenny-particles", {
-            frame: ['smoke_03.png', 'smoke_09.png'],
-            scale: { start: 0.03, end: 0.1 },
-            lifespan: 350,
-            alpha: { start: 1, end: 0.1 }, 
-        });
-        my.vfx.walking.stop();
+        // Remove walking particle effect for underwater
+        // my.vfx.walking = this.add.particles(0, 0, "kenny-particles", {
+        //     frame: ['smoke_03.png', 'smoke_09.png'],
+        //     scale: { start: 0.03, end: 0.1 },
+        //     lifespan: 350,
+        //     alpha: { start: 1, end: 0.1 }, 
+        // });
+        // my.vfx.walking.stop();
         
         // Simple camera to follow player
         this.cameras.main.setBounds(0, 0, this.map.widthInPixels, this.map.heightInPixels);
@@ -241,7 +281,12 @@ class oceanFloor extends Phaser.Scene {
         this.playerHealth = this.playerMaxHealth;
         this.events.emit('updateHealth', this.playerHealth); // Ensure UI is updated at start
 
-        this.scene.launch('UIScene'); // <-- Launch UIScene after assets are loaded
+        // Ensure UIScene is running and visible when oceanFloor starts
+        if (!this.scene.isActive('UIScene')) {
+            this.scene.launch('UIScene');
+        } else {
+            this.scene.setVisible(true, 'UIScene');
+        }
 
         /*// --- Bug Enemy setup: pacing between x=333 and x=450 ---
         this.bugEnemy = this.physics.add.sprite(333, 380, "platformer_characters", "tile_0018.png");
@@ -339,43 +384,41 @@ class oceanFloor extends Phaser.Scene {
 
     update() {
         // Player movement and animation logic
-        if(cursors.left.isDown) {
+        if (cursors.left.isDown) {
             my.sprite.player.setAccelerationX(-this.ACCELERATION);
             my.sprite.player.resetFlip();
             my.sprite.player.anims.play('walk', true);
-            my.vfx.walking.startFollow(my.sprite.player, my.sprite.player.displayWidth/2-10, my.sprite.player.displayHeight/2-5, false);
-            my.vfx.walking.setParticleSpeed(this.PARTICLE_VELOCITY, 0);
-            if (my.sprite.player.body.blocked.down) {
-                my.vfx.walking.start();
-            }
-        } else if(cursors.right.isDown) {
+            // Remove walking vfx underwater
+            // my.vfx.walking.startFollow(...);
+            // my.vfx.walking.setParticleSpeed(...);
+            // if (my.sprite.player.body.blocked.down) {
+            //     my.vfx.walking.start();
+            // }
+        } else if (cursors.right.isDown) {
             my.sprite.player.setAccelerationX(this.ACCELERATION);
             my.sprite.player.setFlip(true, false);
             my.sprite.player.anims.play('walk', true);
-            my.vfx.walking.startFollow(my.sprite.player, -my.sprite.player.displayWidth/2-10, my.sprite.player.displayHeight/2-5, false);
-            my.vfx.walking.setParticleSpeed(-this.PARTICLE_VELOCITY, 0);
-            if (my.sprite.player.body.blocked.down) {
-                my.vfx.walking.start();
-            }
+            // Remove walking vfx underwater
+            // my.vfx.walking.startFollow(...);
+            // my.vfx.walking.setParticleSpeed(...);
+            // if (my.sprite.player.body.blocked.down) {
+            //     my.vfx.walking.start();
+            // }
         } else {
             my.sprite.player.setAccelerationX(0);
             my.sprite.player.setDragX(this.DRAG);
             my.sprite.player.anims.play('idle');
-            my.vfx.walking.stop();
+            // my.vfx.walking.stop();
         }
 
-        // Player jump logic
-        if(!my.sprite.player.body.blocked.down) {
+        // Player jump logic (allow repeated up arrow taps to move up)
+        if (cursors.up.isDown) {
+            my.sprite.player.body.setVelocityY(this.JUMP_VELOCITY);
             my.sprite.player.anims.play('jump');
         }
 
-        // Remove if player body is down to make it so player can always jump 
-        if(Phaser.Input.Keyboard.JustDown(cursors.up)) {
-            my.sprite.player.body.setVelocityY(this.JUMP_VELOCITY);
-        }
-
         // Restart scene on R key
-        if(Phaser.Input.Keyboard.JustDown(this.rKey)) {
+        if (Phaser.Input.Keyboard.JustDown(this.rKey)) {
             this.scene.restart();
         }
 

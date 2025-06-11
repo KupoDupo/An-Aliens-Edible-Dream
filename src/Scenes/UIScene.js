@@ -153,10 +153,11 @@ class UIScene extends Phaser.Scene
             this.scene.setVisible(true);
         }
 
-        // Hook up events to Level1 and Level2 only once, after either is running
+        // Hook up events to Level1, Level2, and oceanFloor only once, after any is running
         if (!this._eventsHooked) {
             const level1 = this.scene.get('Level1');
             const level2 = this.scene.get('Level2');
+            const oceanFloor = this.scene.get('oceanFloor');
             const hookEvents = (level) => {
                 if (!level) return;
                 level.events.on('updateDonuts', (count) => {
@@ -189,7 +190,8 @@ class UIScene extends Phaser.Scene
             };
             if (level1) hookEvents(level1);
             if (level2) hookEvents(level2);
-            if (level1 || level2) this._eventsHooked = true;
+            if (oceanFloor) hookEvents(oceanFloor);
+            if (level1 || level2 || oceanFloor) this._eventsHooked = true;
         }
         // Keep UI in correct position if camera moves
         this.updateDonutUI();
