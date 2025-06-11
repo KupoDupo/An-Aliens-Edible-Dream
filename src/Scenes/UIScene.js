@@ -16,6 +16,14 @@ class UIScene extends Phaser.Scene
 
     create ()
     {
+        // Hide UI if in Ending scene
+        if (this.scene.isActive('Ending')) {
+            this.scene.setVisible(false);
+            return;
+        } else {
+            this.scene.setVisible(true);
+        }
+
         // --- Donut Counter UI (top-right) ---
         this.donutBg = this.add.graphics().setDepth(999).setScrollFactor(0);
         this.donutBg.isDonutBg = true; // tag for updateDonutUI
@@ -137,6 +145,14 @@ class UIScene extends Phaser.Scene
     }
 
     update() {
+        // Hide UI if in Ending scene
+        if (this.scene.isActive('Ending')) {
+            this.scene.setVisible(false);
+            return;
+        } else {
+            this.scene.setVisible(true);
+        }
+
         // Hook up events to Level1 and Level2 only once, after either is running
         if (!this._eventsHooked) {
             const level1 = this.scene.get('Level1');
