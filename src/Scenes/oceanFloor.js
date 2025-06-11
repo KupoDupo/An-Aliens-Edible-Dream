@@ -7,8 +7,8 @@ class oceanFloor extends Phaser.Scene {
         // variables and settings
         this.ACCELERATION = 120; // lower for floatier underwater movement
         this.DRAG = 600;         // lower drag for more glide
-        this.physics.world.gravity.y = 400; // lower gravity for floaty jumps
-        this.JUMP_VELOCITY = -250; // less negative for slower, higher jump
+        this.physics.world.gravity.y = 200; // lower gravity for floaty jumps (lowered from 400)
+        this.JUMP_VELOCITY = -75; // less negative for slower, higher jump (raised from -250)
         this.PARTICLE_VELOCITY = 30;
         this.SCALE = 2.0; // This is the camera zoom scale (e.g., 2.0 for 2x zoom)
     }
@@ -28,11 +28,11 @@ class oceanFloor extends Phaser.Scene {
         if (layerNames.includes("Water")) {
             this.bgLayer = this.map.createLayer("Water", this.tileset, 0, 0);
         }
-        if (layerNames.includes("Grounds")) {
-            this.platformLayer = this.map.createLayer("Grounds", this.tileset, 0, 0);
-        }
         if (layerNames.includes("Pipes")) {
             this.pipeLayer = this.map.createLayer("Pipes", this.tileset, 0, 0);
+        }
+        if (layerNames.includes("Grounds")) {
+            this.platformLayer = this.map.createLayer("Grounds", this.tileset, 0, 0);
         }
         if (layerNames.includes("BlueTint")) {
             this.tintLayer = this.map.createLayer("BlueTint", this.tileset, 0, 0);
@@ -97,7 +97,7 @@ class oceanFloor extends Phaser.Scene {
         this.spikeGroup = this.add.group(this.spikes);
 
         // set up player avatar
-        my.sprite.player = this.physics.add.sprite(29, 350, "platformer_characters", "tile_0004.png");
+        my.sprite.player = this.physics.add.sprite(40, 160, "platformer_characters", "tile_0004.png");
         my.sprite.player.setCollideWorldBounds(true); // Enable world bounds collision
         my.sprite.player.setDepth(10);
 
