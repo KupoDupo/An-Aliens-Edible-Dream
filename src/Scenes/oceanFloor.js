@@ -222,7 +222,7 @@ class oceanFloor extends Phaser.Scene {
                     return;
                 }
             }
-            my.sprite.player.setPosition(40, 160); // Reset player to spawn point
+            my.sprite.player.setPosition(29, 350); // Reset player to spawn point
             my.sprite.player.body.setVelocity(0, 0);
         });
 
