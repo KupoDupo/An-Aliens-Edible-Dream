@@ -11,7 +11,7 @@ class Load extends Phaser.Scene {
 
         this.load.image("dessert_tiles", "dessert.png");                         // Packed tilemap
 
-        this.load.image("background_tiles", "crop_backgrounds_packed.png");
+        this.load.image("background_tiles", "crop_backgrounds_packed.PNG");
 
         this.load.image("shipGreen", "shipGreen.png");
         
