@@ -1,4 +1,4 @@
-/*class Start extends Phaser.Scene {
+class Start extends Phaser.Scene {
     constructor() {
         super("Start");
     }
@@ -42,4 +42,4 @@
             strokeThickness: 3
         }).setOrigin(0.5);
     }
-} */
+}

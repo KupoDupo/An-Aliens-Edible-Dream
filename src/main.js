@@ -32,7 +32,7 @@ let config = {
     width: 1440,
     height: 900,
     // Make sure first scene after load is first in this order since Phaser starts with the first scene in this array 
-    scene: [Load, Level1, Level2, oceanFloor, Ending, UIScene]
+    scene: [Load, Start, Level1, Level2, oceanFloor, Ending, UIScene]
 }
 
 var cursors;
