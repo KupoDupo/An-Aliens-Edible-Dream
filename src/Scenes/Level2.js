@@ -44,6 +44,9 @@ class Level2 extends Phaser.Scene {
         // Explicitly clear collision on prettyLayer to avoid invisible walls
         this.prettyLayer.setCollision(false);
 
+        // Make sure keyboard input is enabled 
+        this.input.keyboard.enabled = true;
+
         const heartObjects = this.map.createFromObjects("Donuts-Candy", {
             name: "heart",
             key: "tilemap_sheet",
@@ -258,8 +261,9 @@ class Level2 extends Phaser.Scene {
         // Movement vfx
         my.vfx.walking = this.add.particles(0, 0, "kenny-particles", {
             frame: ['smoke_03.png', 'smoke_09.png'],
-            scale: { start: 0.03, end: 0.1 },
+            scale: { start: 0.01, end: 0.05 },
             lifespan: 350,
+            frequency: 50,
             alpha: { start: 1, end: 0.1 }, 
         });
         my.vfx.walking.stop();
@@ -353,6 +357,7 @@ class Level2 extends Phaser.Scene {
         this.physics.add.overlap(my.sprite.player, this.pipeGroup, (player, pipe) => {
             // Prevent multiple triggers by disabling the pipe and player input
             this.physics.world.disable(pipe);
+            // Running into issues where player won't move when transitioning to level2 because of this line -> have to set to true in create()
             this.input.keyboard.enabled = false;
             this.scene.start("oceanFloor");
         });
@@ -567,7 +572,7 @@ class Level2 extends Phaser.Scene {
             my.sprite.player.setAccelerationX(this.ACCELERATION);
             my.sprite.player.setFlip(true, false);
             my.sprite.player.anims.play('walk', true);
-            my.vfx.walking.startFollow(my.sprite.player, -my.sprite.player.displayWidth/2-10, my.sprite.player.displayHeight/2-5, false);
+            my.vfx.walking.startFollow(my.sprite.player, -my.sprite.player.displayWidth/2 + 2, my.sprite.player.displayHeight/2-5, false);
             my.vfx.walking.setParticleSpeed(-this.PARTICLE_VELOCITY, 0);
             if (my.sprite.player.body.blocked.down) {
                 my.vfx.walking.start();

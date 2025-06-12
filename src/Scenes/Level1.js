@@ -248,11 +248,12 @@ class Level1 extends Phaser.Scene {
             }
         }, this);
 
-        // Movement vfx
+        // Movement vfx - adjusted to make particles smaller and more subtle 
         my.vfx.walking = this.add.particles(0, 0, "kenny-particles", {
             frame: ['smoke_03.png', 'smoke_09.png'],
-            scale: { start: 0.03, end: 0.1 },
+            scale: { start: 0.01, end: 0.05 }, // adjusted from 0.03 0.1 to 0.01 0.05
             lifespan: 350,
+            frequency: 50, // Emit particles less frequently so he doesn't look like he's farting 
             alpha: { start: 1, end: 0.1 }, 
         });
         my.vfx.walking.stop();
@@ -382,7 +383,7 @@ class Level1 extends Phaser.Scene {
             my.sprite.player.setAccelerationX(this.ACCELERATION);
             my.sprite.player.setFlip(true, false);
             my.sprite.player.anims.play('walk', true);
-            my.vfx.walking.startFollow(my.sprite.player, -my.sprite.player.displayWidth/2-10, my.sprite.player.displayHeight/2-5, false);
+            my.vfx.walking.startFollow(my.sprite.player, -my.sprite.player.displayWidth/2 + 2, my.sprite.player.displayHeight/2-5, false);
             my.vfx.walking.setParticleSpeed(-this.PARTICLE_VELOCITY, 0);
             if (my.sprite.player.body.blocked.down) {
                 my.vfx.walking.start();

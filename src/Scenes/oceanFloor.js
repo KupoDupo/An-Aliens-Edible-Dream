@@ -101,6 +101,9 @@ class oceanFloor extends Phaser.Scene {
         my.sprite.player.setCollideWorldBounds(true); // Enable world bounds collision
         my.sprite.player.setDepth(10);
 
+        // Make sure keyboard input is enabled 
+        this.input.keyboard.enabled = true;
+
         // Enable collision handling between player and platforms
         this.physics.add.collider(my.sprite.player, this.platformLayer);
 
@@ -236,8 +239,14 @@ class oceanFloor extends Phaser.Scene {
         });
         // Combine both pipes into one group
         const allPipes = [...this.pipeLeft, ...this.pipeRight];
-        this.physics.world.enable(allPipes, Phaser.Physics.Arcade.STATIC_BODY);
-        this.exitGroup = this.add.group(allPipes);
+        
+        
+        // Enable physics for each pipe and add to a group
+        // this.physics.world.enable(allPipes, Phaser.Physics.Arcade.STATIC_BODY);
+        this.exitGroup = this.physics.add.staticGroup();
+        allPipes.forEach(pipe => {
+            this.exitGroup.add(pipe);
+        });
 
         // --- Exit overlap: transfer to Level2 ---
         this.physics.add.overlap(my.sprite.player, this.exitGroup, () => {
