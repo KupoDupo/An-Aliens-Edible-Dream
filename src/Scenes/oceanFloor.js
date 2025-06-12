@@ -257,14 +257,6 @@ class oceanFloor extends Phaser.Scene {
         cursors = this.input.keyboard.createCursorKeys();
         this.rKey = this.input.keyboard.addKey('R');
 
-        // debug key listener (assigned to D key)
-        this.input.keyboard.on('keydown-D', () => {
-            this.physics.world.drawDebug = this.physics.world.drawDebug ? false : true;
-            if (this.physics.world.debugGraphic) {
-                this.physics.world.debugGraphic.clear();
-            }
-        }, this);
-
         // Movement vfx - Commented out for now since we likely don't need 
         // Remove walking particle effect for underwater
         // my.vfx.walking = this.add.particles(0, 0, "kenny-particles", {
