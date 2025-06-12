@@ -235,7 +235,7 @@ class oceanFloor extends Phaser.Scene {
         this.pipeRight = this.map.createFromObjects("Objects", {
             name: "pipe2",
             key: "tilemap_sheet",
-            frame: 134,          
+            frame: 132,          
         });
         // Combine both pipes into one group
         const allPipes = [...this.pipeLeft, ...this.pipeRight];
