@@ -32,7 +32,7 @@ class Load extends Phaser.Scene {
             frameHeight: 18
         });
 
-        this.load.spritesheet("background_sheet", "crop_backgrounds_packed.png", {
+        this.load.spritesheet("background_sheet", "crop_backgrounds_packed.PNG", {
             frameWidth: 18,
             frameHeight: 18
         });
